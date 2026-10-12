@@ -10,6 +10,10 @@ export interface ServerEnv {
   isGeminiKeyConfigured: boolean;
   GEMINI_TEXT_MODEL: string;
   GEMINI_IMAGE_MODEL: string;
+  OPENROUTER_API_KEY: string;
+  isOpenRouterConfigured: boolean;
+  OPENROUTER_IMAGE_MODEL: string;
+  IMAGE_PROVIDER: 'gemini' | 'openrouter' | 'auto';
   NEXT_PUBLIC_SUPABASE_URL?: string;
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
@@ -22,20 +26,40 @@ export interface ServerEnv {
 
 export function getServerEnv(): ServerEnv {
   // Check common environment variable aliases for Gemini / Google AI Studio API key
-  const rawKey = 
+  const rawGeminiKey = 
     getCleanEnvKey("GEMINI_API_KEY") ||
     getCleanEnvKey("GOOGLE_API_KEY") ||
     getCleanEnvKey("GOOGLE_GENAI_API_KEY") ||
     getCleanEnvKey("GEMINI_KEY") ||
     "";
 
-  const isConfigured = rawKey.length > 0 && rawKey !== "missing_gemini_key";
+  // Check OpenRouter API key for Qwen image generation
+  const rawOpenRouterKey =
+    getCleanEnvKey("OPENROUTER_API_KEY") ||
+    getCleanEnvKey("OPENROUTER_KEY") ||
+    "";
+
+  const isGeminiConfigured = rawGeminiKey.length > 0 && rawGeminiKey !== "missing_gemini_key";
+  const isOpenRouterConfigured = rawOpenRouterKey.length > 0;
+
+  const rawImageProvider = (getCleanEnvKey("IMAGE_PROVIDER") || "auto").toLowerCase();
+  const imageProvider = (
+    rawImageProvider === 'openrouter' || rawImageProvider === 'qwen'
+      ? 'openrouter'
+      : rawImageProvider === 'gemini'
+      ? 'gemini'
+      : 'auto'
+  ) as 'gemini' | 'openrouter' | 'auto';
 
   return {
-    GEMINI_API_KEY: isConfigured ? rawKey : "",
-    isGeminiKeyConfigured: isConfigured,
+    GEMINI_API_KEY: isGeminiConfigured ? rawGeminiKey : "",
+    isGeminiKeyConfigured: isGeminiConfigured,
     GEMINI_TEXT_MODEL: getCleanEnvKey("GEMINI_TEXT_MODEL") || "gemini-3.8-flash",
     GEMINI_IMAGE_MODEL: getCleanEnvKey("GEMINI_IMAGE_MODEL") || "imagen-3.0-generate-002",
+    OPENROUTER_API_KEY: rawOpenRouterKey,
+    isOpenRouterConfigured,
+    OPENROUTER_IMAGE_MODEL: getCleanEnvKey("OPENROUTER_IMAGE_MODEL") || "qwen/qwen-image-3",
+    IMAGE_PROVIDER: imageProvider,
     NEXT_PUBLIC_SUPABASE_URL: getCleanEnvKey("NEXT_PUBLIC_SUPABASE_URL"),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: getCleanEnvKey("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     SUPABASE_SERVICE_ROLE_KEY: getCleanEnvKey("SUPABASE_SERVICE_ROLE_KEY"),

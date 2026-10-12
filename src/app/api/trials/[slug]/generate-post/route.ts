@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const { slug } = await params;
-    const { postId, apiKey } = await req.json();
+    const { postId, apiKey, openRouterApiKey, imageProvider } = await req.json();
 
     if (!postId) {
       return NextResponse.json({ error: "Missing postId" }, { status: 400 });
@@ -47,23 +47,25 @@ export async function POST(
     // 3. Step C: Generate Image Background
     let bgBuffer: Buffer;
     try {
-      bgBuffer = await generatePostBackground(post, identity, trial.businessName, trial.logoUrl, apiKey);
+      bgBuffer = await generatePostBackground(
+        post, 
+        identity, 
+        trial.businessName, 
+        trial.logoUrl, 
+        apiKey,
+        openRouterApiKey,
+        imageProvider
+      );
     } catch (genErr: any) {
-      console.warn("Background generation error, trying fallback rendering:", genErr?.message);
-      // If model failed or quota exceeded, create high-res gradient background using sharp
-      const sharp = (await import('sharp')).default;
-      const svgBg = `
-        <svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="g" cx="50%" cy="30%" r="70%">
-              <stop offset="0%" stop-color="${identity.palette.secondary || '#333333'}"/>
-              <stop offset="100%" stop-color="${identity.palette.primary || '#121212'}"/>
-            </radialGradient>
-          </defs>
-          <rect width="1080" height="1350" fill="url(#g)"/>
-        </svg>
-      `;
-      bgBuffer = await sharp(Buffer.from(svgBg)).png().toBuffer();
+      console.error("Image generation failed:", genErr?.message);
+      await updateTrialPost(trial.id, postId, {
+        generationStatus: 'failed',
+        errorMessage: genErr?.message || 'Image generation failed'
+      });
+      return NextResponse.json({
+        error: genErr?.message || 'Image generation failed',
+        post: { ...post, generationStatus: 'failed', errorMessage: genErr?.message || 'Image generation failed' }
+      }, { status: 500 });
     }
 
     // 4. Quality Gate Check
@@ -73,7 +75,15 @@ export async function POST(
     if (!qualityFindings.passed && post.retryCount < 1) {
       console.log(`Quality gate failed for post ${postId}, retrying once...`);
       try {
-        bgBuffer = await generatePostBackground(post, identity, trial.businessName, trial.logoUrl);
+        bgBuffer = await generatePostBackground(
+          post, 
+          identity, 
+          trial.businessName, 
+          trial.logoUrl,
+          apiKey,
+          openRouterApiKey,
+          imageProvider
+        );
       } catch (retryErr) {
         // keep prior buffer
       }

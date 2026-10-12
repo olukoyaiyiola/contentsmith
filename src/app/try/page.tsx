@@ -31,8 +31,10 @@ export default function TryPage() {
   const [productFiles, setProductFiles] = useState<File[]>([]);
   const [productPreviews, setProductPreviews] = useState<string[]>([]);
   
-  // Custom API Key (for Vercel deployment or personal testing)
+  // Custom API Key & Model Settings
   const [apiKey, setApiKey] = useState('');
+  const [openRouterApiKey, setOpenRouterApiKey] = useState('');
+  const [imageProvider, setImageProvider] = useState<'openrouter' | 'gemini'>('openrouter');
   const [showKeyField, setShowKeyField] = useState(false);
 
   useEffect(() => {
@@ -40,6 +42,15 @@ export default function TryPage() {
     if (saved) {
       setApiKey(saved);
       setShowKeyField(true);
+    }
+    const savedOpenRouter = localStorage.getItem('contentsmith_openrouter_api_key');
+    if (savedOpenRouter) {
+      setOpenRouterApiKey(savedOpenRouter);
+      setShowKeyField(true);
+    }
+    const savedProvider = localStorage.getItem('contentsmith_image_provider');
+    if (savedProvider === 'gemini' || savedProvider === 'openrouter') {
+      setImageProvider(savedProvider);
     }
   }, []);
 
@@ -99,11 +110,15 @@ export default function TryPage() {
         formData.append('productPhotos', file);
       });
 
-      // Save & pass custom API key if entered
+      // Save & pass custom API keys and provider choice if entered
       if (apiKey.trim()) {
         localStorage.setItem('contentsmith_gemini_api_key', apiKey.trim());
         formData.append('apiKey', apiKey.trim());
       }
+      if (openRouterApiKey.trim()) {
+        localStorage.setItem('contentsmith_openrouter_api_key', openRouterApiKey.trim());
+      }
+      localStorage.setItem('contentsmith_image_provider', imageProvider);
 
       const res = await fetch('/api/trials/create', {
         method: 'POST',
@@ -324,7 +339,7 @@ export default function TryPage() {
           />
         </div>
 
-        {/* Gemini API Key Config (Optional Passable Key) */}
+        {/* AI Engine & API Keys Configuration */}
         <div className="pt-2 border-t border-[#E5E2DA]">
           <button
             type="button"
@@ -332,35 +347,109 @@ export default function TryPage() {
             className="text-xs font-bold text-[#121316] hover:underline flex items-center gap-1.5"
           >
             <Key className="w-3.5 h-3.5 text-[#F5B301]" />
-            <span>{showKeyField ? 'Hide API Key settings' : 'Pass custom Gemini API key (optional / test key)'}</span>
+            <span>{showKeyField ? 'Hide AI Engine & Key settings' : 'Configure AI Engine & API Keys (Qwen Image / Gemini)'}</span>
           </button>
 
           {showKeyField && (
-            <div className="mt-3 p-3.5 bg-[#F3F1EC] rounded border border-[#E5E2DA] space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[#121316]">
-                  Gemini API Key (AI Studio)
+            <div className="mt-3 p-4 bg-[#F3F1EC] rounded-lg border border-[#E5E2DA] space-y-4">
+              {/* Image Engine Selection */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#121316] mb-1.5">
+                  Visual Image Engine
                 </label>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
-                >
-                  <span>Get Key at Google AI Studio</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setImageProvider('openrouter')}
+                    className={`p-3 rounded border text-left flex flex-col gap-1 transition-all ${
+                      imageProvider === 'openrouter'
+                        ? 'bg-amber-100/70 border-[#121316] shadow-[2px_2px_0px_#121316]'
+                        : 'bg-white border-[#E5E2DA] hover:border-[#121316]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#121316]">Qwen Image 3 (OpenRouter)</span>
+                      <span className="text-[10px] bg-[#F5B301] text-[#121316] font-bold px-1.5 py-0.5 rounded">Selected</span>
+                    </div>
+                    <span className="text-[11px] text-[#5C5F66]">
+                      Commercial retail rendering &amp; photorealistic backgrounds.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setImageProvider('gemini')}
+                    className={`p-3 rounded border text-left flex flex-col gap-1 transition-all ${
+                      imageProvider === 'gemini'
+                        ? 'bg-amber-100/70 border-[#121316] shadow-[2px_2px_0px_#121316]'
+                        : 'bg-white border-[#E5E2DA] hover:border-[#121316]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#121316]">Imagen 3 (Google Gemini)</span>
+                    </div>
+                    <span className="text-[11px] text-[#5C5F66]">
+                      Google native image generation pipeline.
+                    </span>
+                  </button>
+                </div>
               </div>
-              <input
-                type="password"
-                placeholder="AIzaSy..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full p-2 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
-              />
-              <p className="text-[11px] text-[#5C5F66] leading-normal">
-                If <code className="font-mono font-semibold">GEMINI_API_KEY</code> is already configured in your Vercel Project Environment Variables, you can leave this empty. Passing a key here temporarily overrides the server key for this browser session.
-              </p>
+
+              {/* OpenRouter API Key */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#121316]">
+                    OpenRouter API Key {imageProvider === 'openrouter' && <span className="text-amber-800 font-normal">(for Qwen Image)</span>}
+                  </label>
+                  <a
+                    href="https://openrouter.ai/keys"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>Get Key at OpenRouter</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  placeholder="sk-or-v1-..."
+                  value={openRouterApiKey}
+                  onChange={(e) => setOpenRouterApiKey(e.target.value)}
+                  className="w-full p-2 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
+                />
+                <p className="text-[11px] text-[#5C5F66]">
+                  Enter your OpenRouter key to generate images with Qwen, or set <code className="font-mono font-semibold">OPENROUTER_API_KEY</code> in Vercel environment variables.
+                </p>
+              </div>
+
+              {/* Gemini API Key */}
+              <div className="space-y-1.5 pt-2 border-t border-[#E5E2DA]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#121316]">
+                    Gemini API Key (AI Studio)
+                  </label>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>Get Key at Google AI Studio</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  placeholder="AIzaSy..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="w-full p-2 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
+                />
+                <p className="text-[11px] text-[#5C5F66]">
+                  Used for brand identity extraction and 7-day calendar planning. If <code className="font-mono font-semibold">GEMINI_API_KEY</code> is set in Vercel, leave empty.
+                </p>
+              </div>
             </div>
           )}
         </div>

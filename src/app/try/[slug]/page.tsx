@@ -22,7 +22,10 @@ import {
   Palette,
   ExternalLink,
   ChevronRight,
-  Info
+  Info,
+  Sliders,
+  Key,
+  X
 } from 'lucide-react';
 
 
@@ -46,9 +49,25 @@ function TrialContent({ slug }: { slug: string }) {
   // Progressive generation state
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
 
+  // AI Engine & Keys State
+  const [imageProvider, setImageProvider] = useState<'openrouter' | 'gemini'>('openrouter');
+  const [openRouterApiKey, setOpenRouterApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   // Load trial on mount
   useEffect(() => {
     fetchTrial();
+    if (typeof window !== 'undefined') {
+      const savedProvider = localStorage.getItem('contentsmith_image_provider');
+      if (savedProvider === 'gemini' || savedProvider === 'openrouter') {
+        setImageProvider(savedProvider);
+      }
+      const savedOR = localStorage.getItem('contentsmith_openrouter_api_key');
+      if (savedOR) setOpenRouterApiKey(savedOR);
+      const savedG = localStorage.getItem('contentsmith_gemini_api_key');
+      if (savedG) setGeminiApiKey(savedG);
+    }
   }, [slug]);
 
   const fetchTrial = async () => {
@@ -110,11 +129,19 @@ function TrialContent({ slug }: { slug: string }) {
     });
 
     try {
-      const savedApiKey = typeof window !== 'undefined' ? localStorage.getItem('contentsmith_gemini_api_key') : null;
+      const savedGeminiKey = (geminiApiKey || (typeof window !== 'undefined' ? localStorage.getItem('contentsmith_gemini_api_key') : null) || '').trim();
+      const savedOpenRouterKey = (openRouterApiKey || (typeof window !== 'undefined' ? localStorage.getItem('contentsmith_openrouter_api_key') : null) || '').trim();
+      const activeProvider = imageProvider || (typeof window !== 'undefined' ? (localStorage.getItem('contentsmith_image_provider') as any) : null) || 'openrouter';
+
       const res = await fetch(`/api/trials/${slug}/generate-post`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: post.id, apiKey: savedApiKey || undefined })
+        body: JSON.stringify({ 
+          postId: post.id, 
+          apiKey: savedGeminiKey || undefined,
+          openRouterApiKey: savedOpenRouterKey || undefined,
+          imageProvider: activeProvider
+        })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -222,7 +249,16 @@ function TrialContent({ slug }: { slug: string }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="px-3.5 py-2.5 rounded text-xs font-bold border border-[#121316] bg-white hover:bg-neutral-50 flex items-center gap-2 shadow-sm transition-all"
+            title="Configure AI Image Engine and API Keys"
+          >
+            <Sliders className="w-3.5 h-3.5 text-[#121316]" />
+            <span>Image Engine: <strong className="font-mono text-[#121316]">{imageProvider === 'openrouter' ? 'Qwen 3' : 'Imagen 3'}</strong></span>
+          </button>
+
           <button
             onClick={generateAllVisuals}
             disabled={isGeneratingAll || readyCount === posts.length}
@@ -450,15 +486,25 @@ function TrialContent({ slug }: { slug: string }) {
                           <span className="text-xs font-semibold text-white">Generating visual...</span>
                         </div>
                       ) : isFailed ? (
-                        <div className="flex flex-col items-center gap-2 text-rose-400">
-                          <AlertTriangle className="w-6 h-6" />
-                          <span className="text-xs font-semibold">{post.errorMessage || 'Generation failed'}</span>
-                          <button
-                            onClick={() => generateSinglePost(post)}
-                            className="btn-danfo px-3 py-1 rounded text-xs font-bold text-[#121316] mt-2"
-                          >
-                            Retry generation
-                          </button>
+                        <div className="flex flex-col items-center gap-2 text-rose-400 p-4 max-w-full">
+                          <AlertTriangle className="w-6 h-6 flex-shrink-0 text-rose-500" />
+                          <span className="text-xs font-semibold text-center leading-tight line-clamp-3">
+                            {post.errorMessage || 'Generation failed'}
+                          </span>
+                          <div className="flex items-center gap-2 mt-2">
+                            <button
+                              onClick={() => generateSinglePost(post)}
+                              className="btn-danfo px-3 py-1 rounded text-xs font-bold text-[#121316]"
+                            >
+                              Retry
+                            </button>
+                            <button
+                              onClick={() => setShowSettingsModal(true)}
+                              className="px-2.5 py-1 rounded text-xs font-bold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-600"
+                            >
+                              Engine Keys
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center gap-2">
@@ -570,6 +616,158 @@ function TrialContent({ slug }: { slug: string }) {
           </div>
         </div>
       </section>
+
+      {/* AI Image Engine & Keys Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="signboard-card bg-[#FBF9F4] w-full max-w-lg rounded-xl overflow-hidden shadow-2xl border-[2px] border-[#121316]">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 bg-amber-400 border-b-[2px] border-[#121316] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-[#121316]" />
+                <h3 className="font-display font-black text-lg text-[#121316]">
+                  Visual Image Engine &amp; API Keys
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="p-1 rounded hover:bg-black/10 text-[#121316]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 space-y-5 text-xs sm:text-sm">
+              {/* Engine Selector */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#121316] mb-2">
+                  Choose Image Generation Model
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageProvider('openrouter');
+                      if (typeof window !== 'undefined') localStorage.setItem('contentsmith_image_provider', 'openrouter');
+                    }}
+                    className={`p-3 rounded-lg border-[1.5px] text-left flex flex-col gap-1 transition-all ${
+                      imageProvider === 'openrouter'
+                        ? 'bg-amber-100 border-[#121316] shadow-[2px_2px_0px_#121316]'
+                        : 'bg-white border-[#E5E2DA] hover:border-[#121316]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#121316]">Qwen Image 3</span>
+                      {imageProvider === 'openrouter' && (
+                        <span className="text-[10px] bg-[#F5B301] text-[#121316] font-bold px-1.5 py-0.5 rounded">Active</span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[#5C5F66]">
+                      Powered by OpenRouter. Top-tier commercial product backgrounds.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageProvider('gemini');
+                      if (typeof window !== 'undefined') localStorage.setItem('contentsmith_image_provider', 'gemini');
+                    }}
+                    className={`p-3 rounded-lg border-[1.5px] text-left flex flex-col gap-1 transition-all ${
+                      imageProvider === 'gemini'
+                        ? 'bg-amber-100 border-[#121316] shadow-[2px_2px_0px_#121316]'
+                        : 'bg-white border-[#E5E2DA] hover:border-[#121316]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#121316]">Imagen 3</span>
+                      {imageProvider === 'gemini' && (
+                        <span className="text-[10px] bg-[#F5B301] text-[#121316] font-bold px-1.5 py-0.5 rounded">Active</span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[#5C5F66]">
+                      Google native image generation pipeline via Gemini.
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* OpenRouter API Key Field */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#121316]">
+                    OpenRouter API Key {imageProvider === 'openrouter' && <span className="text-amber-800 font-semibold">(required for Qwen)</span>}
+                  </label>
+                  <a
+                    href="https://openrouter.ai/keys"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>Get Key</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  placeholder="sk-or-v1-..."
+                  value={openRouterApiKey}
+                  onChange={(e) => {
+                    setOpenRouterApiKey(e.target.value);
+                    if (typeof window !== 'undefined') localStorage.setItem('contentsmith_openrouter_api_key', e.target.value.trim());
+                  }}
+                  className="w-full p-2.5 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
+                />
+                <p className="text-[11px] text-[#5C5F66]">
+                  Stored locally in your browser for this session. Model target: <code className="font-mono font-bold">qwen/qwen-image-3</code>.
+                </p>
+              </div>
+
+              {/* Gemini API Key Field */}
+              <div className="space-y-1.5 pt-2 border-t border-[#E5E2DA]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#121316]">
+                    Gemini API Key (AI Studio)
+                  </label>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>Get Key</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  placeholder="AIzaSy..."
+                  value={geminiApiKey}
+                  onChange={(e) => {
+                    setGeminiApiKey(e.target.value);
+                    if (typeof window !== 'undefined') localStorage.setItem('contentsmith_gemini_api_key', e.target.value.trim());
+                  }}
+                  className="w-full p-2.5 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
+                />
+                <p className="text-[11px] text-[#5C5F66]">
+                  Optional if configured in Vercel environment variables.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-neutral-100 border-t border-[#E5E2DA] flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="btn-danfo px-5 py-2 rounded text-xs font-bold"
+              >
+                Done &amp; Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

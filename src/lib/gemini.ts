@@ -316,18 +316,66 @@ Rules:
   }
 }
 
+// OpenRouter Qwen Image Generation Helper
+async function generateQwenImageWithOpenRouter(
+  prompt: string,
+  apiKey: string,
+  modelName: string
+): Promise<Buffer> {
+  const cleanKey = apiKey.trim().replace(/^["']|["']$/g, '');
+  const res = await fetch("https://openrouter.ai/api/v1/images", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${cleanKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://contentsmith.ng",
+      "X-Title": "ContentSmith",
+    },
+    body: JSON.stringify({
+      model: modelName || "qwen/qwen-image-3",
+      prompt,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errText = errorData?.error?.message || errorData?.message || res.statusText;
+    throw new Error(`OpenRouter Qwen Image generation error (${res.status}): ${errText}`);
+  }
+
+  const json = await res.json();
+  const item = json.data?.[0];
+  if (!item) {
+    throw new Error("No image returned from OpenRouter Qwen Image model.");
+  }
+
+  if (item.b64_json) {
+    return Buffer.from(item.b64_json, "base64");
+  }
+
+  if (item.url) {
+    const imgRes = await fetch(item.url);
+    const arrayBuffer = await imgRes.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  throw new Error("Invalid image format returned from OpenRouter Qwen Image model.");
+}
+
 // 3. Step C: Visual Brief & Image Generation
 export async function generatePostBackground(
   post: TrialPost,
   identity: IdentityCard,
   businessName: string,
   referenceImageBase64?: string,
-  apiKeyOverride?: string
+  apiKeyOverride?: string,
+  openRouterApiKeyOverride?: string,
+  providerOverride?: 'gemini' | 'openrouter'
 ): Promise<Buffer> {
   const startTime = Date.now();
-  const { ai, imageModelName } = getAiClient(apiKeyOverride);
+  const env = getServerEnv();
 
-  // Strict anti-slop prompt for Gemini Image Model
+  // Strict anti-slop prompt for Image Models
   const imagePrompt = `
 Commercial advertising photography background for Nigerian business "${businessName}".
 Visual Theme: ${post.pillar} - ${post.objective}.
@@ -339,6 +387,47 @@ Composition Guidelines:
 - NO TEXT. DO NOT RENDER ANY WORDS, LETTERS, SIGNS, LABELS, WATERMARKS, OR CHARACTERS. Text will be overlaid separately.
 - Strict Negative Prompt: purple gradients, neon glow, floating 3D spheres, glossy plastic, fake smiles, over-smoothed mannequin skin, generic luxury marble, stereotyped clip art.
 `;
+
+  // Check if OpenRouter Qwen should be used
+  const effectiveOpenRouterKey = (openRouterApiKeyOverride || env.OPENROUTER_API_KEY || '').trim();
+  const preferOpenRouter = 
+    providerOverride === 'openrouter' ||
+    (providerOverride !== 'gemini' && effectiveOpenRouterKey.length > 0 && env.IMAGE_PROVIDER !== 'gemini');
+
+  if (providerOverride === 'openrouter' && !effectiveOpenRouterKey) {
+    throw new Error("OpenRouter API key is required to generate images with Qwen. Please configure your OpenRouter API key in settings or set OPENROUTER_API_KEY.");
+  }
+
+  if (preferOpenRouter && effectiveOpenRouterKey) {
+    const qwenModel = env.OPENROUTER_IMAGE_MODEL || 'qwen/qwen-image-3';
+    console.log(`Generating visual flyer using Qwen Image (${qwenModel}) via OpenRouter...`);
+    try {
+      const qwenBuffer = await generateQwenImageWithOpenRouter(imagePrompt, effectiveOpenRouterKey, qwenModel);
+      await logUsage({
+        id: crypto.randomUUID(),
+        callType: 'image_generation',
+        modelName: qwenModel,
+        promptTokens: 0,
+        candidateTokens: 0,
+        totalTokens: 0,
+        estimatedCostUsd: 0.03,
+        durationMs: Date.now() - startTime,
+        status: 'success',
+        ipHash: 'openrouter_qwen',
+        createdAt: new Date().toISOString()
+      });
+      return qwenBuffer;
+    } catch (qwenError: any) {
+      console.warn("OpenRouter Qwen Image generation failed:", qwenError.message);
+      if (providerOverride === 'openrouter' || !env.isGeminiKeyConfigured) {
+        throw qwenError;
+      }
+      console.log("Falling back to Gemini Image generation...");
+    }
+  }
+
+  // Fallback or default to Gemini Image Generation
+  const { ai, imageModelName } = getAiClient(apiKeyOverride);
 
   try {
     const response = await ai.models.generateImages({
