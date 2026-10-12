@@ -1,58 +1,48 @@
-import { z } from "zod";
+function getCleanEnvKey(keyName: string): string | undefined {
+  const val = process.env[keyName];
+  if (!val) return undefined;
+  const trimmed = val.trim().replace(/^["']|["']$/g, '');
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
-const serverEnvSchema = z.object({
-  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
-  GEMINI_TEXT_MODEL: z.string().min(1).default("gemini-2.5-flash"),
-  GEMINI_IMAGE_MODEL: z.string().min(1).default("imagen-3.0-generate-002"),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
-  DAILY_TRIAL_CAP: z.coerce.number().int().positive().default(50),
-  CRON_SECRET: z.string().default("contentsmith_cron_secret_default"),
-  IP_HASH_SALT: z.string().default("contentsmith_salt_2026"),
-  TURNSTILE_SECRET_KEY: z.string().optional(),
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
-});
-
-export type ServerEnv = z.infer<typeof serverEnvSchema>;
-
-let cachedEnv: ServerEnv | null = null;
+export interface ServerEnv {
+  GEMINI_API_KEY: string;
+  isGeminiKeyConfigured: boolean;
+  GEMINI_TEXT_MODEL: string;
+  GEMINI_IMAGE_MODEL: string;
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  DAILY_TRIAL_CAP: number;
+  CRON_SECRET: string;
+  IP_HASH_SALT: string;
+  TURNSTILE_SECRET_KEY?: string;
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
+}
 
 export function getServerEnv(): ServerEnv {
-  if (cachedEnv) return cachedEnv;
+  // Check common environment variable aliases for Gemini / Google AI Studio API key
+  const rawKey = 
+    getCleanEnvKey("GEMINI_API_KEY") ||
+    getCleanEnvKey("GOOGLE_API_KEY") ||
+    getCleanEnvKey("GOOGLE_GENAI_API_KEY") ||
+    getCleanEnvKey("GEMINI_KEY") ||
+    "";
 
-  const result = serverEnvSchema.safeParse({
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    GEMINI_TEXT_MODEL: process.env.GEMINI_TEXT_MODEL,
-    GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    DAILY_TRIAL_CAP: process.env.DAILY_TRIAL_CAP,
-    CRON_SECRET: process.env.CRON_SECRET,
-    IP_HASH_SALT: process.env.IP_HASH_SALT,
-    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-  });
+  const isConfigured = rawKey.length > 0 && rawKey !== "missing_gemini_key";
 
-  if (!result.success) {
-    // In dev or test environments when keys are missing, provide readable error or dummy dev values
-    console.warn("Server environment warning:", result.error.format());
-    return {
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY || "missing_gemini_key",
-      GEMINI_TEXT_MODEL: process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash",
-      GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL || "imagen-3.0-generate-002",
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      DAILY_TRIAL_CAP: Number(process.env.DAILY_TRIAL_CAP || "50"),
-      CRON_SECRET: process.env.CRON_SECRET || "contentsmith_cron_secret_default",
-      IP_HASH_SALT: process.env.IP_HASH_SALT || "contentsmith_salt_2026",
-      TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
-      NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-    };
-  }
-
-  cachedEnv = result.data;
-  return cachedEnv;
+  return {
+    GEMINI_API_KEY: isConfigured ? rawKey : "",
+    isGeminiKeyConfigured: isConfigured,
+    GEMINI_TEXT_MODEL: getCleanEnvKey("GEMINI_TEXT_MODEL") || "gemini-2.5-flash",
+    GEMINI_IMAGE_MODEL: getCleanEnvKey("GEMINI_IMAGE_MODEL") || "imagen-3.0-generate-002",
+    NEXT_PUBLIC_SUPABASE_URL: getCleanEnvKey("NEXT_PUBLIC_SUPABASE_URL"),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: getCleanEnvKey("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    SUPABASE_SERVICE_ROLE_KEY: getCleanEnvKey("SUPABASE_SERVICE_ROLE_KEY"),
+    DAILY_TRIAL_CAP: Number(getCleanEnvKey("DAILY_TRIAL_CAP") || "50"),
+    CRON_SECRET: getCleanEnvKey("CRON_SECRET") || "contentsmith_cron_secret_default",
+    IP_HASH_SALT: getCleanEnvKey("IP_HASH_SALT") || "contentsmith_salt_2026",
+    TURNSTILE_SECRET_KEY: getCleanEnvKey("TURNSTILE_SECRET_KEY"),
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: getCleanEnvKey("NEXT_PUBLIC_TURNSTILE_SITE_KEY"),
+  };
 }

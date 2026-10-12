@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const { slug } = await params;
-    const { postId } = await req.json();
+    const { postId, apiKey } = await req.json();
 
     if (!postId) {
       return NextResponse.json({ error: "Missing postId" }, { status: 400 });
@@ -47,7 +47,7 @@ export async function POST(
     // 3. Step C: Generate Image Background
     let bgBuffer: Buffer;
     try {
-      bgBuffer = await generatePostBackground(post, identity, trial.businessName, trial.logoUrl);
+      bgBuffer = await generatePostBackground(post, identity, trial.businessName, trial.logoUrl, apiKey);
     } catch (genErr: any) {
       console.warn("Background generation error, trying fallback rendering:", genErr?.message);
       // If model failed or quota exceeded, create high-res gradient background using sharp
@@ -67,7 +67,7 @@ export async function POST(
     }
 
     // 4. Quality Gate Check
-    const qualityFindings = await runQualityGate(bgBuffer, identity);
+    const qualityFindings = await runQualityGate(bgBuffer, identity, apiKey);
 
     // If quality gate fails, retry once
     if (!qualityFindings.passed && post.retryCount < 1) {

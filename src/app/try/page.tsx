@@ -1,8 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, AlertCircle, ArrowRight, Loader2, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { 
+  Upload, 
+  AlertCircle, 
+  ArrowRight, 
+  Loader2, 
+  Sparkles, 
+  Image as ImageIcon,
+  Key,
+  HelpCircle,
+  ExternalLink
+} from 'lucide-react';
 
 export default function TryPage() {
   const router = useRouter();
@@ -20,6 +30,18 @@ export default function TryPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [productFiles, setProductFiles] = useState<File[]>([]);
   const [productPreviews, setProductPreviews] = useState<string[]>([]);
+  
+  // Custom API Key (for Vercel deployment or personal testing)
+  const [apiKey, setApiKey] = useState('');
+  const [showKeyField, setShowKeyField] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('contentsmith_gemini_api_key');
+    if (saved) {
+      setApiKey(saved);
+      setShowKeyField(true);
+    }
+  }, []);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -77,6 +99,12 @@ export default function TryPage() {
         formData.append('productPhotos', file);
       });
 
+      // Save & pass custom API key if entered
+      if (apiKey.trim()) {
+        localStorage.setItem('contentsmith_gemini_api_key', apiKey.trim());
+        formData.append('apiKey', apiKey.trim());
+      }
+
       const res = await fetch('/api/trials/create', {
         method: 'POST',
         body: formData,
@@ -92,8 +120,17 @@ export default function TryPage() {
     } catch (err: any) {
       setError(err?.message || 'A network error occurred. Please try again.');
       setLoading(false);
+      if (err?.message?.toLowerCase().includes('api key')) {
+        setShowKeyField(true);
+      }
     }
   };
+
+  const isKeyRelatedError = error && (
+    error.toLowerCase().includes('api key') || 
+    error.toLowerCase().includes('unauthorized') ||
+    error.toLowerCase().includes('invalid_argument')
+  );
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
@@ -111,14 +148,32 @@ export default function TryPage() {
         </p>
       </div>
 
-      {/* Error banner */}
+      {/* Error banner with Vercel guidance */}
       {error && (
-        <div className="mb-6 p-4 bg-amber-50 border-[1.5px] border-amber-600 rounded-lg flex items-start gap-3 text-amber-900 text-sm">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-700 mt-0.5" />
-          <div>
-            <p className="font-bold">Notice</p>
-            <p>{error}</p>
+        <div className="mb-6 p-4 sm:p-5 bg-amber-50 border-[1.5px] border-amber-600 rounded-lg text-amber-950 text-xs sm:text-sm space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-700 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Notice</p>
+              <p className="mt-0.5 leading-relaxed">{error}</p>
+            </div>
           </div>
+
+          {isKeyRelatedError && (
+            <div className="pt-3 border-t border-amber-300 text-xs text-amber-900 space-y-2">
+              <p className="font-bold">How to fix in Vercel:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Open your project on the <strong>Vercel Dashboard</strong>.</li>
+                <li>Go to <strong>Settings → Environment Variables</strong>.</li>
+                <li>Add Key: <code className="bg-amber-200/80 px-1 py-0.5 rounded font-mono font-bold">GEMINI_API_KEY</code> (or <code className="bg-amber-200/80 px-1 py-0.5 rounded font-mono font-bold">GOOGLE_API_KEY</code>).</li>
+                <li>Value: Paste your key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline font-bold text-amber-950">Google AI Studio</a>.</li>
+                <li>Click <strong>Save</strong> and trigger a quick <strong>Redeploy</strong>.</li>
+              </ol>
+              <p className="mt-2 text-[11px] text-amber-800">
+                💡 <em>Alternatively, paste your key directly in the <strong>Gemini API Key</strong> box below to run immediately without redeploying.</em>
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -267,6 +322,47 @@ export default function TryPage() {
             onChange={(e) => setWhatsappNumber(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border-[1.5px] border-[#121316] rounded text-sm text-[#121316] focus:outline-none focus:ring-2 focus:ring-[#F5B301]"
           />
+        </div>
+
+        {/* Gemini API Key Config (Optional Passable Key) */}
+        <div className="pt-2 border-t border-[#E5E2DA]">
+          <button
+            type="button"
+            onClick={() => setShowKeyField(!showKeyField)}
+            className="text-xs font-bold text-[#121316] hover:underline flex items-center gap-1.5"
+          >
+            <Key className="w-3.5 h-3.5 text-[#F5B301]" />
+            <span>{showKeyField ? 'Hide API Key settings' : 'Pass custom Gemini API key (optional / test key)'}</span>
+          </button>
+
+          {showKeyField && (
+            <div className="mt-3 p-3.5 bg-[#F3F1EC] rounded border border-[#E5E2DA] space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#121316]">
+                  Gemini API Key (AI Studio)
+                </label>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
+                >
+                  <span>Get Key at Google AI Studio</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <input
+                type="password"
+                placeholder="AIzaSy..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full p-2 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
+              />
+              <p className="text-[11px] text-[#5C5F66] leading-normal">
+                If <code className="font-mono font-semibold">GEMINI_API_KEY</code> is already configured in your Vercel Project Environment Variables, you can leave this empty. Passing a key here temporarily overrides the server key for this browser session.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Submit Button */}

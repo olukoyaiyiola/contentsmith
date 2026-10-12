@@ -110,10 +110,11 @@ function TrialContent({ slug }: { slug: string }) {
     });
 
     try {
+      const savedApiKey = typeof window !== 'undefined' ? localStorage.getItem('contentsmith_gemini_api_key') : null;
       const res = await fetch(`/api/trials/${slug}/generate-post`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: post.id })
+        body: JSON.stringify({ postId: post.id, apiKey: savedApiKey || undefined })
       });
       const data = await res.json();
       if (!res.ok) {

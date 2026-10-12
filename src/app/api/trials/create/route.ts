@@ -100,6 +100,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const customApiKey = formData.get('apiKey')?.toString()?.trim() || req.headers.get('x-gemini-api-key')?.trim() || undefined;
+
     // 4. Generate unguessable 12-char slug
     const shortSlug = crypto.randomBytes(9).toString('base64url').slice(0, 12);
     const trialId = crypto.randomUUID();
@@ -114,7 +116,8 @@ export async function POST(req: NextRequest) {
         city: validated.city,
         tone: validated.tone,
         ipHash,
-      }
+      },
+      customApiKey
     );
 
     // 6. Step B: Week Plan Generation (Gemini Text)
@@ -127,7 +130,8 @@ export async function POST(req: NextRequest) {
         tone: validated.tone,
         ipHash,
       },
-      identityCard
+      identityCard,
+      customApiKey
     );
 
     // Attach trial ID to posts

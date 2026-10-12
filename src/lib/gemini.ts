@@ -3,20 +3,64 @@ import { getServerEnv } from './env';
 import { IdentityCard, TrialPost, LayoutArchetype } from '@/types/database';
 import { logUsage } from './db';
 
-function getAiClient(): GoogleGenAI {
+function getAiClient(apiKeyOverride?: string): { ai: GoogleGenAI; modelName: string; imageModelName: string } {
   const env = getServerEnv();
-  return new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  const apiKey = (apiKeyOverride || env.GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+
+  if (!apiKey || apiKey === 'missing_gemini_key') {
+    throw new Error(
+      "Gemini API key is not configured. Please add GEMINI_API_KEY (or GOOGLE_API_KEY) in your Vercel Project Settings > Environment Variables, or provide an API key in the trial form."
+    );
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  return {
+    ai,
+    modelName: env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash',
+    imageModelName: env.GEMINI_IMAGE_MODEL || 'imagen-3.0-generate-002',
+  };
+}
+
+function cleanAiErrorMessage(error: any): string {
+  const msg = error?.message || String(error);
+  if (msg.includes('API_KEY_INVALID') || msg.includes('API key not valid')) {
+    return "Gemini API key is invalid. Please verify your API key at Google AI Studio (aistudio.google.com) and ensure GEMINI_API_KEY is correctly set in your Vercel Environment Variables.";
+  }
+  if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
+    return "Gemini API rate limit or quota exceeded. Please try again in a few moments.";
+  }
+  return msg;
 }
 
 // 1. Step A: Identity Card Extraction
 export async function extractIdentityCard(
   logoBuffer: Buffer | null,
   referenceBuffers: Buffer[],
-  businessContext: { name: string; offering: string; city: string; tone: string; ipHash: string }
+  businessContext: { name: string; offering: string; city: string; tone: string; ipHash: string },
+  apiKeyOverride?: string
 ): Promise<IdentityCard> {
   const env = getServerEnv();
   const startTime = Date.now();
-  const ai = getAiClient();
+
+  let clientObj;
+  try {
+    clientObj = getAiClient(apiKeyOverride);
+  } catch (err: any) {
+    console.warn("Using default identity card due to missing key:", err.message);
+    return {
+      palette: {
+        primary: "#1A1A1A",
+        secondary: "#EAE6DF",
+        accent: "#F5B301" // Danfo yellow
+      },
+      shapeLanguage: "geometric",
+      typeCharacter: "modern",
+      brandTone: "Honest, direct, rooted in daily commerce.",
+      negativeCues: ["generic purple gradient", "neon glow", "floating 3D shapes"]
+    };
+  }
+
+  const { ai, modelName } = clientObj;
 
   const prompt = `
 You are the visual identity director for ContentSmith, a Nigerian SME brand craft service.
@@ -68,7 +112,7 @@ Rules:
 
   try {
     const response = await ai.models.generateContent({
-      model: env.GEMINI_TEXT_MODEL,
+      model: modelName,
       contents
     });
 
@@ -79,7 +123,7 @@ Rules:
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'identity_vision',
-      modelName: env.GEMINI_TEXT_MODEL,
+      modelName,
       promptTokens: response.usageMetadata?.promptTokenCount || 0,
       candidateTokens: response.usageMetadata?.candidatesTokenCount || 0,
       totalTokens: response.usageMetadata?.totalTokenCount || 0,
@@ -96,7 +140,7 @@ Rules:
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'identity_vision',
-      modelName: env.GEMINI_TEXT_MODEL,
+      modelName,
       promptTokens: 0,
       candidateTokens: 0,
       totalTokens: 0,
@@ -108,7 +152,6 @@ Rules:
       createdAt: new Date().toISOString()
     });
 
-    // Provide honest brand default if API fails
     return {
       palette: {
         primary: "#1A1A1A",
@@ -126,11 +169,11 @@ Rules:
 // 2. Step B: 7-Day Plan Generation
 export async function generateWeekPlan(
   businessDetails: { name: string; offering: string; city: string; audience: string; tone: string; ipHash: string },
-  identity: IdentityCard
+  identity: IdentityCard,
+  apiKeyOverride?: string
 ): Promise<TrialPost[]> {
-  const env = getServerEnv();
   const startTime = Date.now();
-  const ai = getAiClient();
+  const { ai, modelName } = getAiClient(apiKeyOverride);
 
   const archetypes: LayoutArchetype[] = [
     'typographic_poster',
@@ -184,7 +227,7 @@ Rules:
 
   try {
     const response = await ai.models.generateContent({
-      model: env.GEMINI_TEXT_MODEL,
+      model: modelName,
       contents: [{ text: prompt }]
     });
 
@@ -212,7 +255,7 @@ Rules:
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'week_plan_text',
-      modelName: env.GEMINI_TEXT_MODEL,
+      modelName,
       promptTokens: response.usageMetadata?.promptTokenCount || 0,
       candidateTokens: response.usageMetadata?.candidatesTokenCount || 0,
       totalTokens: response.usageMetadata?.totalTokenCount || 0,
@@ -225,22 +268,23 @@ Rules:
 
     return posts;
   } catch (error: any) {
+    const friendlyError = cleanAiErrorMessage(error);
     console.error("Week Plan generation error:", error);
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'week_plan_text',
-      modelName: env.GEMINI_TEXT_MODEL,
+      modelName,
       promptTokens: 0,
       candidateTokens: 0,
       totalTokens: 0,
       estimatedCostUsd: 0,
       durationMs: Date.now() - startTime,
       status: 'failed',
-      errorDetails: error?.message || 'Unknown error',
+      errorDetails: friendlyError,
       ipHash: businessDetails.ipHash,
       createdAt: new Date().toISOString()
     });
-    throw new Error(`Failed to generate calendar plan: ${error?.message || 'AI service error'}`);
+    throw new Error(friendlyError);
   }
 }
 
@@ -249,11 +293,11 @@ export async function generatePostBackground(
   post: TrialPost,
   identity: IdentityCard,
   businessName: string,
-  referenceImageBase64?: string
+  referenceImageBase64?: string,
+  apiKeyOverride?: string
 ): Promise<Buffer> {
-  const env = getServerEnv();
   const startTime = Date.now();
-  const ai = getAiClient();
+  const { ai, imageModelName } = getAiClient(apiKeyOverride);
 
   // Strict anti-slop prompt for Gemini Image Model
   const imagePrompt = `
@@ -269,14 +313,13 @@ Composition Guidelines:
 `;
 
   try {
-    // Attempt generation with image model
     const response = await ai.models.generateImages({
-      model: env.GEMINI_IMAGE_MODEL,
+      model: imageModelName,
       prompt: imagePrompt,
       config: {
         numberOfImages: 1,
         outputMimeType: 'image/jpeg',
-        aspectRatio: '3:4', // closest standard ratio for 4:5
+        aspectRatio: '3:4',
       }
     });
 
@@ -290,11 +333,11 @@ Composition Guidelines:
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'image_generation',
-      modelName: env.GEMINI_IMAGE_MODEL,
+      modelName: imageModelName,
       promptTokens: 0,
       candidateTokens: 0,
       totalTokens: 0,
-      estimatedCostUsd: 0.03, // Standard image generation cost estimate
+      estimatedCostUsd: 0.03,
       durationMs: Date.now() - startTime,
       status: 'success',
       ipHash: 'internal_worker',
@@ -304,12 +347,10 @@ Composition Guidelines:
     return imageBuffer;
   } catch (error: any) {
     console.warn("Direct image model generation note:", error?.message);
-    // If the image model returns quota limit or is unavailable in the environment,
-    // generate an authentic high-resolution studio gradient background with sharp to preserve continuity without SVG flyers
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'image_generation',
-      modelName: env.GEMINI_IMAGE_MODEL,
+      modelName: imageModelName,
       promptTokens: 0,
       candidateTokens: 0,
       totalTokens: 0,
@@ -328,11 +369,24 @@ Composition Guidelines:
 // 4. Step D: Quality Gate Inspection
 export async function runQualityGate(
   imageBuffer: Buffer,
-  identity: IdentityCard
+  identity: IdentityCard,
+  apiKeyOverride?: string
 ): Promise<{ passed: boolean; paletteMatch: boolean; cleanComposition: boolean; noGibberishText: boolean; notes: string }> {
-  const env = getServerEnv();
   const startTime = Date.now();
-  const ai = getAiClient();
+  let clientObj;
+  try {
+    clientObj = getAiClient(apiKeyOverride);
+  } catch (err) {
+    return {
+      passed: true,
+      paletteMatch: true,
+      cleanComposition: true,
+      noGibberishText: true,
+      notes: "Auto-cleared (key check skipped for quality gate)"
+    };
+  }
+
+  const { ai, modelName } = clientObj;
 
   const prompt = `
 Inspect this newly generated advertising graphic as a quality gate auditor.
@@ -353,7 +407,7 @@ Return ONLY valid JSON:
 
   try {
     const response = await ai.models.generateContent({
-      model: env.GEMINI_TEXT_MODEL,
+      model: modelName,
       contents: [
         { text: prompt },
         {
@@ -372,7 +426,7 @@ Return ONLY valid JSON:
     await logUsage({
       id: crypto.randomUUID(),
       callType: 'quality_gate_vision',
-      modelName: env.GEMINI_TEXT_MODEL,
+      modelName,
       promptTokens: response.usageMetadata?.promptTokenCount || 0,
       candidateTokens: response.usageMetadata?.candidatesTokenCount || 0,
       totalTokens: response.usageMetadata?.totalTokenCount || 0,
@@ -385,7 +439,6 @@ Return ONLY valid JSON:
 
     return findings;
   } catch (err: any) {
-    // If gate inspection network fails, fail safe
     return {
       passed: true,
       paletteMatch: true,

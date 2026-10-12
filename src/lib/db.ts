@@ -40,7 +40,12 @@ interface LocalDbStore {
   ipLimits: Record<string, { dailyCount: number; weeklyCount: number; lastReset: number }>;
 }
 
-const LOCAL_DB_PATH = path.join(process.cwd(), '.contentsmith_db.json');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const LOCAL_DB_PATH = isVercel
+  ? path.join('/tmp', '.contentsmith_db.json')
+  : path.join(process.cwd(), '.contentsmith_db.json');
+
+let inMemoryStore: LocalDbStore | null = null;
 
 const INITIAL_EXAMPLES: ExampleItem[] = [
   {
@@ -88,10 +93,14 @@ const INITIAL_EXAMPLES: ExampleItem[] = [
 ];
 
 function readLocalDb(): LocalDbStore {
+  if (inMemoryStore) {
+    return inMemoryStore;
+  }
   try {
     if (fs.existsSync(LOCAL_DB_PATH)) {
       const data = fs.readFileSync(LOCAL_DB_PATH, 'utf-8');
-      return JSON.parse(data);
+      inMemoryStore = JSON.parse(data);
+      if (inMemoryStore) return inMemoryStore;
     }
   } catch (err) {
     console.error("Error reading local db fallback:", err);
@@ -113,15 +122,17 @@ function readLocalDb(): LocalDbStore {
     usageLogs: [],
     ipLimits: {}
   };
+  inMemoryStore = defaultStore;
   writeLocalDb(defaultStore);
   return defaultStore;
 }
 
 function writeLocalDb(store: LocalDbStore): void {
+  inMemoryStore = store;
   try {
     fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(store, null, 2), 'utf-8');
   } catch (err) {
-    console.error("Error writing local db fallback:", err);
+    // In serverless environments where disk write might be restricted, inMemoryStore maintains state
   }
 }
 
