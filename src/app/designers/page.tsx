@@ -127,15 +127,15 @@ function DesignersForm() {
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
             <h3 className="font-display font-bold text-xl mb-2">Request Logged Successfully</h3>
             <p className="text-sm text-emerald-800 max-w-md mx-auto mb-6">
-              Your brief has been assigned to our design queue. We will contact you at WhatsApp ({whatsappNumber}) within one business day.
+              Your brief has been assigned to our strategy desk. <strong>Neye (+234 916 271 6205)</strong> will contact you via WhatsApp ({whatsappNumber}) within one business day.
             </p>
             <a
-              href={getWhatsAppHref(`Hello ContentSmith, I submitted a bespoke designer request for ${businessName}.`)}
+              href={getWhatsAppHref(`Hello Neye, I submitted a bespoke content strategy & design request for ${businessName}.`)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-danfo px-6 py-3 rounded text-sm font-bold inline-block"
             >
-              Confirm on WhatsApp directly
+              Confirm with Neye on WhatsApp directly
             </a>
           </div>
         ) : (

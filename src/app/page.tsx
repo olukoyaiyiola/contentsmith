@@ -157,7 +157,7 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className="btn-outline py-3 px-4 rounded text-center text-sm font-semibold flex items-center justify-center gap-2"
             >
-              <span>Speak with the craft desk</span>
+              <span>Speak with Neye on WhatsApp</span>
             </a>
           </div>
         </div>

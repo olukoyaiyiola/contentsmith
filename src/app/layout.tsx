@@ -104,19 +104,33 @@ export default function RootLayout({
               </div>
 
               <div>
-                <h4 className="font-display font-bold text-sm uppercase tracking-wider mb-3">Contact & Desk</h4>
-                <p className="text-sm text-[#5C5F66] mb-2">
-                  Direct merchant support desk:
-                </p>
-                <a
-                  href={siteConfig.whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm font-bold text-[#121316] hover:underline"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  WhatsApp {siteConfig.whatsappDisplay}
-                </a>
+                <h4 className="font-display font-bold text-sm uppercase tracking-wider mb-3">Contact &amp; Strategy</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-xs text-[#5C5F66] block">Merchant Support Desk:</span>
+                    <a
+                      href={siteConfig.whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 font-bold text-[#121316] hover:underline"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      WhatsApp {siteConfig.whatsappDisplay}
+                    </a>
+                  </div>
+                  <div>
+                    <span className="text-xs text-[#5C5F66] block">Tailored Strategy &amp; Planning (Neye):</span>
+                    <a
+                      href={siteConfig.neyeWhatsAppLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 font-bold text-[#121316] hover:underline"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-[#F5B301]"></span>
+                      WhatsApp {siteConfig.neyeWhatsAppDisplay} (Neye)
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
 

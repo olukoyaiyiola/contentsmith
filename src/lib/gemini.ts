@@ -574,7 +574,7 @@ Composition Guidelines:
     (providerOverride !== 'gemini' && effectiveOpenRouterKey.length > 0 && env.IMAGE_PROVIDER !== 'gemini');
 
   if (providerOverride === 'openrouter' && !effectiveOpenRouterKey) {
-    throw new Error("OpenRouter API key is required to generate images with Qwen. Please configure your OpenRouter API key in settings or set OPENROUTER_API_KEY.");
+    throw new Error("OPENROUTER_API_KEY is not configured in the server environment variables. Please add OPENROUTER_API_KEY to your .env or Vercel Project Environment Variables.");
   }
 
   if (preferOpenRouter && effectiveOpenRouterKey) {

@@ -7,7 +7,7 @@ import {
   IdentityCard, 
   PostGenerationStatus 
 } from '@/types/database';
-import { siteConfig, getWhatsAppHref } from '@/config/site';
+import { siteConfig, getWhatsAppHref, getNeyeWhatsAppHref } from '@/config/site';
 import { 
   Clock, 
   Check, 
@@ -49,9 +49,8 @@ function TrialContent({ slug }: { slug: string }) {
   // Progressive generation state
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
 
-  // AI Engine & Keys State
+  // AI Engine State (keys are handled server-side via environment variables)
   const [imageProvider, setImageProvider] = useState<'openrouter' | 'gemini'>('openrouter');
-  const [openRouterApiKey, setOpenRouterApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
@@ -63,8 +62,6 @@ function TrialContent({ slug }: { slug: string }) {
       if (savedProvider === 'gemini' || savedProvider === 'openrouter') {
         setImageProvider(savedProvider);
       }
-      const savedOR = localStorage.getItem('contentsmith_openrouter_api_key');
-      if (savedOR) setOpenRouterApiKey(savedOR);
       const savedG = localStorage.getItem('contentsmith_gemini_api_key');
       if (savedG) setGeminiApiKey(savedG);
     }
@@ -130,7 +127,6 @@ function TrialContent({ slug }: { slug: string }) {
 
     try {
       const savedGeminiKey = (geminiApiKey || (typeof window !== 'undefined' ? localStorage.getItem('contentsmith_gemini_api_key') : null) || '').trim();
-      const savedOpenRouterKey = (openRouterApiKey || (typeof window !== 'undefined' ? localStorage.getItem('contentsmith_openrouter_api_key') : null) || '').trim();
       const activeProvider = imageProvider || (typeof window !== 'undefined' ? (localStorage.getItem('contentsmith_image_provider') as any) : null) || 'openrouter';
 
       const res = await fetch(`/api/trials/${slug}/generate-post`, {
@@ -139,7 +135,6 @@ function TrialContent({ slug }: { slug: string }) {
         body: JSON.stringify({ 
           postId: post.id, 
           apiKey: savedGeminiKey || undefined,
-          openRouterApiKey: savedOpenRouterKey || undefined,
           imageProvider: activeProvider
         })
       });
@@ -502,7 +497,7 @@ function TrialContent({ slug }: { slug: string }) {
                               onClick={() => setShowSettingsModal(true)}
                               className="px-2.5 py-1 rounded text-xs font-bold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-600"
                             >
-                              Engine Keys
+                              Engine Settings
                             </button>
                           </div>
                         </div>
@@ -587,24 +582,24 @@ function TrialContent({ slug }: { slug: string }) {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
           <div className="md:col-span-8">
             <span className="bg-[#121316] text-white text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-2 inline-block">
-              Trial Complete
+              Tailored Human Strategy
             </span>
             <h3 className="font-display font-black text-2xl sm:text-3xl text-[#121316] mb-2">
-              Ready to take this into monthly production?
+              Want tailored content strategy and planning with Neye?
             </h3>
             <p className="text-sm text-[#121316]/80 leading-relaxed">
-              Connect directly with the ContentSmith craft desk. Share this trial slug ({slug}) to discuss dedicated weekly calendar production, photography clean-up, and ongoing publication.
+              Connect directly with <strong>Neye (+234 916 271 6205)</strong> on WhatsApp. Share this trial slug (<strong className="font-mono">{slug}</strong>) to get tailored, human-curated content strategy, customized calendar execution, and dedicated brand planning.
             </p>
           </div>
 
           <div className="md:col-span-4 flex flex-col gap-3">
             <a
-              href={getWhatsAppHref(`Hello ContentSmith, I just reviewed my 7-day calendar for ${trial.businessName} (Trial reference: ${slug}). I would like to speak about continuing this work.`)}
+              href={getNeyeWhatsAppHref(`Hello Neye, I just reviewed my 7-day calendar for ${trial.businessName} (Trial reference: ${slug}). I would like to speak about more tailored content strategy and planning.`)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-ink py-3 px-4 rounded text-center text-sm font-bold flex items-center justify-center gap-2"
             >
-              <span>Continue on WhatsApp</span>
+              <span>Chat with Neye on WhatsApp</span>
               <ExternalLink className="w-4 h-4" />
             </a>
             <a
@@ -693,34 +688,15 @@ function TrialContent({ slug }: { slug: string }) {
                 </div>
               </div>
 
-              {/* OpenRouter API Key Field */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[#121316]">
-                    OpenRouter API Key {imageProvider === 'openrouter' && <span className="text-amber-800 font-semibold">(required for Qwen)</span>}
-                  </label>
-                  <a
-                    href="https://openrouter.ai/keys"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-semibold"
-                  >
-                    <span>Get Key</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-                <input
-                  type="password"
-                  placeholder="sk-or-v1-..."
-                  value={openRouterApiKey}
-                  onChange={(e) => {
-                    setOpenRouterApiKey(e.target.value);
-                    if (typeof window !== 'undefined') localStorage.setItem('contentsmith_openrouter_api_key', e.target.value.trim());
-                  }}
-                  className="w-full p-2.5 bg-white border border-[#121316] rounded font-mono text-xs focus:ring-2 focus:ring-[#F5B301]"
-                />
-                <p className="text-[11px] text-[#5C5F66]">
-                  Stored locally in your browser for this session. Model target: <code className="font-mono font-bold">qwen/qwen-image-3</code>.
+              {/* Engine Status Note */}
+              <div className="p-3 bg-white rounded-lg border border-[#E5E2DA] text-xs text-[#5C5F66] space-y-1">
+                <p className="font-semibold text-[#121316]">
+                  {imageProvider === 'openrouter' 
+                    ? '⚡ Qwen Image 3 is powered securely by the server\'s OPENROUTER_API_KEY.' 
+                    : '⚡ Imagen 3 is powered securely by the server\'s GEMINI_API_KEY.'}
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Keys are configured via server environment variables for security. No frontend keys required.
                 </p>
               </div>
 
