@@ -107,7 +107,7 @@ export default function RootLayout({
                 <h4 className="font-display font-bold text-sm uppercase tracking-wider mb-3">Contact &amp; Strategy</h4>
                 <div className="space-y-2 text-sm">
                   <div>
-                    <span className="text-xs text-[#5C5F66] block">Merchant Support Desk:</span>
+                    <span className="text-xs text-[#5C5F66] block">Merchant Support Desk (Iyi):</span>
                     <a
                       href={siteConfig.whatsappLink}
                       target="_blank"
@@ -115,7 +115,7 @@ export default function RootLayout({
                       className="inline-flex items-center gap-1.5 font-bold text-[#121316] hover:underline"
                     >
                       <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      WhatsApp {siteConfig.whatsappDisplay}
+                      WhatsApp {siteConfig.whatsappDisplay} (Iyi)
                     </a>
                   </div>
                   <div>

@@ -157,7 +157,15 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className="btn-outline py-3 px-4 rounded text-center text-sm font-semibold flex items-center justify-center gap-2"
             >
-              <span>Speak with Neye on WhatsApp</span>
+              <span>Speak with Iyi on WhatsApp</span>
+            </a>
+            <a
+              href={siteConfig.neyeWhatsAppLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-center text-[#5C5F66] hover:text-[#121316] font-medium transition-colors pt-1"
+            >
+              Need human planning? Talk to Neye &rarr;
             </a>
           </div>
         </div>

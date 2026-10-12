@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { siteConfig, getWhatsAppHref } from '@/config/site';
+import { siteConfig, getWhatsAppHref, getNeyeWhatsAppHref } from '@/config/site';
 import { 
   Sparkles, 
   Send, 
@@ -130,7 +130,7 @@ function DesignersForm() {
               Your brief has been assigned to our strategy desk. <strong>Neye (+234 916 271 6205)</strong> will contact you via WhatsApp ({whatsappNumber}) within one business day.
             </p>
             <a
-              href={getWhatsAppHref(`Hello Neye, I submitted a bespoke content strategy & design request for ${businessName}.`)}
+              href={getNeyeWhatsAppHref(`Hello Neye, I submitted a bespoke content strategy & design request for ${businessName}.`)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-danfo px-6 py-3 rounded text-sm font-bold inline-block"

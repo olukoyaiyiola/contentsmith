@@ -2,10 +2,11 @@ export interface SiteConfig {
   name: string;
   tagline: string;
   description: string;
-  // General merchant support desk
+  // General merchant support desk (Iyi)
   whatsappNumber: string;
   whatsappDisplay: string;
   whatsappLink: string;
+  iyiName: string;
   // Tailored human content strategy & planning (Neye)
   neyeWhatsAppNumber: string;
   neyeWhatsAppDisplay: string;
@@ -20,11 +21,12 @@ export const siteConfig: SiteConfig = {
   name: "ContentSmith",
   tagline: "Content calendars and visual identity for Nigerian businesses.",
   description: "Transform your logo and product photos into a week of authentic social posts and brand-aligned visual flyers.",
-  // Original general support desk
+  // General support desk (Iyi)
   whatsappNumber: "2347032293819",
   whatsappDisplay: "07032293819",
   whatsappLink: "https://wa.me/2347032293819",
-  // Tailored human content strategy & planning desk
+  iyiName: "Iyi",
+  // Tailored human content strategy & planning desk (Neye)
   neyeWhatsAppNumber: "2349162716205",
   neyeWhatsAppDisplay: "+234 916 271 6205",
   neyeWhatsAppLink: "https://wa.me/2349162716205",
@@ -38,11 +40,11 @@ export const siteConfig: SiteConfig = {
   dailyTrialCap: 50,
 };
 
-// General desk WhatsApp link
+// General desk WhatsApp link (Iyi)
 export function getWhatsAppHref(message?: string): string {
   const base = `https://wa.me/${siteConfig.whatsappNumber}`;
-  if (!message) return base;
-  return `${base}?text=${encodeURIComponent(message)}`;
+  const defaultText = message || `Hello Iyi, I have an inquiry about ContentSmith.`;
+  return `${base}?text=${encodeURIComponent(defaultText)}`;
 }
 
 // Tailored strategy & planning link (Neye)
