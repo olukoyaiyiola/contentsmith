@@ -34,7 +34,7 @@ export function getServerEnv(): ServerEnv {
   return {
     GEMINI_API_KEY: isConfigured ? rawKey : "",
     isGeminiKeyConfigured: isConfigured,
-    GEMINI_TEXT_MODEL: getCleanEnvKey("GEMINI_TEXT_MODEL") || "gemini-2.5-flash",
+    GEMINI_TEXT_MODEL: getCleanEnvKey("GEMINI_TEXT_MODEL") || "gemini-3.8-flash",
     GEMINI_IMAGE_MODEL: getCleanEnvKey("GEMINI_IMAGE_MODEL") || "imagen-3.0-generate-002",
     NEXT_PUBLIC_SUPABASE_URL: getCleanEnvKey("NEXT_PUBLIC_SUPABASE_URL"),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: getCleanEnvKey("NEXT_PUBLIC_SUPABASE_ANON_KEY"),

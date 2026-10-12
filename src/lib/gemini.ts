@@ -16,9 +16,41 @@ function getAiClient(apiKeyOverride?: string): { ai: GoogleGenAI; modelName: str
   const ai = new GoogleGenAI({ apiKey });
   return {
     ai,
-    modelName: env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash',
+    modelName: env.GEMINI_TEXT_MODEL || 'gemini-3.8-flash',
     imageModelName: env.GEMINI_IMAGE_MODEL || 'imagen-3.0-generate-002',
   };
+}
+
+/**
+ * Resilient content generator that automatically falls back to gemini-3.8-flash
+ * if the requested model is deprecated or not available in the region.
+ */
+async function generateContentWithFallback(
+  ai: GoogleGenAI,
+  preferredModel: string,
+  params: { contents: any[] }
+) {
+  try {
+    return await ai.models.generateContent({
+      model: preferredModel,
+      ...params,
+    });
+  } catch (error: any) {
+    const msg = error?.message || '';
+    if (
+      error?.status === 'NOT_FOUND' || 
+      msg.includes('404') || 
+      msg.includes('no longer available') || 
+      msg.includes('not found')
+    ) {
+      console.warn(`Model ${preferredModel} is not available, falling back to gemini-3.8-flash...`);
+      return await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        ...params,
+      });
+    }
+    throw error;
+  }
 }
 
 function cleanAiErrorMessage(error: any): string {
@@ -111,10 +143,7 @@ Rules:
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents
-    });
+    const response = await generateContentWithFallback(ai, modelName, { contents });
 
     const text = response.text?.trim() || "";
     const cleanJson = text.replace(/^```json/i, '').replace(/```$/i, '').trim();
@@ -226,8 +255,7 @@ Rules:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelName,
+    const response = await generateContentWithFallback(ai, modelName, {
       contents: [{ text: prompt }]
     });
 
@@ -406,8 +434,7 @@ Return ONLY valid JSON:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelName,
+    const response = await generateContentWithFallback(ai, modelName, {
       contents: [
         { text: prompt },
         {
