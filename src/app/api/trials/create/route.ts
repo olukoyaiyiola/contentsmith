@@ -101,12 +101,13 @@ export async function POST(req: NextRequest) {
     }
 
     const customApiKey = formData.get('apiKey')?.toString()?.trim() || req.headers.get('x-gemini-api-key')?.trim() || undefined;
+    const customOpenRouterApiKey = formData.get('openRouterApiKey')?.toString()?.trim() || req.headers.get('x-openrouter-api-key')?.trim() || undefined;
 
     // 4. Generate unguessable 12-char slug
     const shortSlug = crypto.randomBytes(9).toString('base64url').slice(0, 12);
     const trialId = crypto.randomUUID();
 
-    // 5. Step A: Identity Card Extraction (Gemini Vision)
+    // 5. Step A: Identity Card Extraction (Gemini Vision / Inferred Palette)
     const identityCard = await extractIdentityCard(
       logoBuffer,
       referenceBuffers,
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
       customApiKey
     );
 
-    // 6. Step B: Week Plan Generation (Gemini Text)
+    // 6. Step B: Week Plan Generation (Gemini Text / Qwen OpenRouter / Curated SME Engine)
     const posts = await generateWeekPlan(
       {
         name: validated.businessName,
@@ -131,7 +132,8 @@ export async function POST(req: NextRequest) {
         ipHash,
       },
       identityCard,
-      customApiKey
+      customApiKey,
+      customOpenRouterApiKey
     );
 
     // Attach trial ID to posts

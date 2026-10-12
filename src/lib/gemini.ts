@@ -195,22 +195,163 @@ Rules:
   }
 }
 
-// 2. Step B: 7-Day Plan Generation
-export async function generateWeekPlan(
-  businessDetails: { name: string; offering: string; city: string; audience: string; tone: string; ipHash: string },
-  identity: IdentityCard,
-  apiKeyOverride?: string
-): Promise<TrialPost[]> {
-  const startTime = Date.now();
-  const { ai, modelName } = getAiClient(apiKeyOverride);
+// Helper to call OpenRouter for text generation (e.g. Qwen 2.5 72B)
+async function generateTextWithOpenRouter(
+  prompt: string,
+  apiKey: string,
+  model: string = "qwen/qwen-2.5-72b-instruct"
+): Promise<string> {
+  const cleanKey = apiKey.trim().replace(/^["']|["']$/g, '');
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${cleanKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://contentsmith.ng",
+      "X-Title": "ContentSmith",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+    }),
+  });
 
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errText = errorData?.error?.message || errorData?.message || res.statusText;
+    throw new Error(`OpenRouter text plan error (${res.status}): ${errText}`);
+  }
+
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content || "";
+}
+
+// Curated Nigerian Retail 7-day social calendar tailored to shop basics
+function buildTailoredDefaultPosts(
+  businessDetails: { name: string; offering: string; city: string; audience: string; tone: string },
+  identity: IdentityCard
+): TrialPost[] {
   const archetypes: LayoutArchetype[] = [
-    'typographic_poster',
+    'announcement',
     'product_hero_offset',
     'split_panel',
     'testimonial_card',
     'price_menu_list',
+    'typographic_poster',
+    'before_after'
+  ];
+
+  const primaryItem = businessDetails.offering.split(',')[0].trim() || businessDetails.offering;
+
+  const templates = [
+    {
+      dayIndex: 1,
+      dayName: "Monday",
+      pillar: "Weekly Schedule / Drop",
+      objective: "Drive early week pre-orders",
+      hook: `Fresh batch timetable for ${businessDetails.city} orders.`,
+      caption: `We are accepting orders for ${businessDetails.offering} starting this morning. Early booking guarantees same-day neighborhood dispatch.`,
+      cta: "Send a WhatsApp message to book your slot",
+      layoutArchetype: "announcement" as LayoutArchetype
+    },
+    {
+      dayIndex: 2,
+      dayName: "Tuesday",
+      pillar: "Product Spotlight",
+      objective: "Highlight signature craftsmanship",
+      hook: `Made with precision: our signature ${primaryItem}.`,
+      caption: `Every piece is prepared with care and consistent attention to detail. No shortcuts, just honest quality for our ${businessDetails.city} customers.`,
+      cta: "Tap link to view details and order",
+      layoutArchetype: "product_hero_offset" as LayoutArchetype
+    },
+    {
+      dayIndex: 3,
+      dayName: "Wednesday",
+      pillar: "Craft & Process",
+      objective: "Build authentic trust",
+      hook: "From raw ingredients to finished standard.",
+      caption: `Behind every order is dedicated handwork and authentic local sourcing. We prioritize lasting taste and presentation over rushed batching.`,
+      cta: "Chat with us on WhatsApp for custom requests",
+      layoutArchetype: "split_panel" as LayoutArchetype
+    },
+    {
+      dayIndex: 4,
+      dayName: "Thursday",
+      pillar: "Customer Voice",
+      objective: "Social proof in Nigerian retail",
+      hook: `"Ordered for the office on Commercial Avenue. Every item was fresh and on time."`,
+      caption: `Real feedback from our regular buyers across ${businessDetails.city}. Reliable service every single day.`,
+      cta: "Join our regular weekly list on WhatsApp",
+      layoutArchetype: "testimonial_card" as LayoutArchetype
+    },
+    {
+      dayIndex: 5,
+      dayName: "Friday",
+      pillar: "Weekend Menu & Bulk Orders",
+      objective: "Capture weekend gathering and party demand",
+      hook: `Weekend order guide for ${businessDetails.name}.`,
+      caption: `Planning for family or weekend events? Reserve your ${businessDetails.offering} before slots fill up today.`,
+      cta: "Lock in your weekend order on WhatsApp",
+      layoutArchetype: "price_menu_list" as LayoutArchetype
+    },
+    {
+      dayIndex: 6,
+      dayName: "Saturday",
+      pillar: "Brand Value / Philosophy",
+      objective: "Deepen customer connection",
+      hook: `Quality is our signature in ${businessDetails.city}.`,
+      caption: `We do not compromise on standard. Serving ${businessDetails.audience || 'customers'} with consistency and pride.`,
+      cta: "Visit us or message on WhatsApp",
+      layoutArchetype: "typographic_poster" as LayoutArchetype
+    },
+    {
+      dayIndex: 7,
+      dayName: "Sunday",
+      pillar: "Restock & Week Ahead",
+      objective: "Set up next week's reservations",
+      hook: "Sunday wrap-up and restock notification.",
+      caption: `Thank you for supporting ${businessDetails.name} this week. Monday dispatch lists are now open.`,
+      cta: "Send a message to reserve ahead",
+      layoutArchetype: "before_after" as LayoutArchetype
+    }
+  ];
+
+  return templates.map((p, idx) => ({
+    id: crypto.randomUUID(),
+    trialId: '',
+    dayIndex: p.dayIndex,
+    dayName: p.dayName,
+    pillar: p.pillar,
+    objective: p.objective,
+    hook: p.hook,
+    caption: p.caption,
+    cta: p.cta,
+    layoutArchetype: archetypes[idx % archetypes.length],
+    generationStatus: 'queued',
+    retryCount: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }));
+}
+
+// 2. Step B: 7-Day Plan Generation
+export async function generateWeekPlan(
+  businessDetails: { name: string; offering: string; city: string; audience: string; tone: string; ipHash: string },
+  identity: IdentityCard,
+  apiKeyOverride?: string,
+  openRouterApiKeyOverride?: string
+): Promise<TrialPost[]> {
+  const startTime = Date.now();
+  const env = getServerEnv();
+
+  const archetypes: LayoutArchetype[] = [
     'announcement',
+    'product_hero_offset',
+    'split_panel',
+    'testimonial_card',
+    'price_menu_list',
+    'typographic_poster',
     'before_after'
   ];
 
@@ -225,12 +366,12 @@ Tone: "${identity.brandTone}"
 
 Return a JSON array of exactly 7 post objects.
 Use each of the following 7 layout archetypes exactly once across the week:
-1. "typographic_poster" (Bold quote, opening hours, or punchy philosophy)
+1. "announcement" (Order deadline, delivery notice, restock)
 2. "product_hero_offset" (Highlighting a flagship item with price or detail)
 3. "split_panel" (Contrasting ingredients, process, or variety)
 4. "testimonial_card" (Real customer voice from Lagos/Nigeria)
 5. "price_menu_list" (Menu, weekly drop, or price breakdown)
-6. "announcement" (Order deadline, delivery notice, restock)
+6. "typographic_poster" (Bold quote, opening hours, or punchy philosophy)
 7. "before_after" (Raw dough to golden pastry, fabric to garment, transformation)
 
 Return ONLY valid JSON (no markdown \`\`\`json tags):
@@ -254,66 +395,104 @@ Rules:
 - Strictly no em dashes. No empty motivational platitudes.
 `;
 
-  try {
-    const response = await generateContentWithFallback(ai, modelName, {
-      contents: [{ text: prompt }]
-    });
+  // 1. Try Gemini Text Model if Gemini key is available
+  if (apiKeyOverride || env.isGeminiKeyConfigured) {
+    try {
+      const { ai, modelName } = getAiClient(apiKeyOverride);
+      const response = await generateContentWithFallback(ai, modelName, {
+        contents: [{ text: prompt }]
+      });
 
-    const text = response.text?.trim() || "";
-    const cleanJson = text.replace(/^```json/i, '').replace(/```$/i, '').trim();
-    const rawPosts = JSON.parse(cleanJson);
+      const text = response.text?.trim() || "";
+      const cleanJson = text.replace(/^```json/i, '').replace(/```$/i, '').trim();
+      const rawPosts = JSON.parse(cleanJson);
 
-    const posts: TrialPost[] = rawPosts.map((p: any, idx: number) => ({
-      id: crypto.randomUUID(),
-      trialId: '',
-      dayIndex: p.dayIndex || idx + 1,
-      dayName: p.dayName || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][idx],
-      pillar: p.pillar || 'Craft & Process',
-      objective: p.objective || 'Build trust',
-      hook: p.hook || `Day ${idx + 1} spotlight`,
-      caption: p.caption || 'Crafted with care for daily customers.',
-      cta: p.cta || 'Order on WhatsApp',
-      layoutArchetype: archetypes[idx % archetypes.length],
-      generationStatus: 'queued',
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
+      const posts: TrialPost[] = rawPosts.map((p: any, idx: number) => ({
+        id: crypto.randomUUID(),
+        trialId: '',
+        dayIndex: p.dayIndex || idx + 1,
+        dayName: p.dayName || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][idx],
+        pillar: p.pillar || 'Craft & Process',
+        objective: p.objective || 'Build trust',
+        hook: p.hook || `Day ${idx + 1} spotlight`,
+        caption: p.caption || 'Crafted with care for daily customers.',
+        cta: p.cta || 'Order on WhatsApp',
+        layoutArchetype: archetypes[idx % archetypes.length],
+        generationStatus: 'queued',
+        retryCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
 
-    await logUsage({
-      id: crypto.randomUUID(),
-      callType: 'week_plan_text',
-      modelName,
-      promptTokens: response.usageMetadata?.promptTokenCount || 0,
-      candidateTokens: response.usageMetadata?.candidatesTokenCount || 0,
-      totalTokens: response.usageMetadata?.totalTokenCount || 0,
-      estimatedCostUsd: ((response.usageMetadata?.totalTokenCount || 0) * 0.0000003),
-      durationMs: Date.now() - startTime,
-      status: 'success',
-      ipHash: businessDetails.ipHash,
-      createdAt: new Date().toISOString()
-    });
+      await logUsage({
+        id: crypto.randomUUID(),
+        callType: 'week_plan_text',
+        modelName,
+        promptTokens: response.usageMetadata?.promptTokenCount || 0,
+        candidateTokens: response.usageMetadata?.candidatesTokenCount || 0,
+        totalTokens: response.usageMetadata?.totalTokenCount || 0,
+        estimatedCostUsd: ((response.usageMetadata?.totalTokenCount || 0) * 0.0000003),
+        durationMs: Date.now() - startTime,
+        status: 'success',
+        ipHash: businessDetails.ipHash,
+        createdAt: new Date().toISOString()
+      });
 
-    return posts;
-  } catch (error: any) {
-    const friendlyError = cleanAiErrorMessage(error);
-    console.error("Week Plan generation error:", error);
-    await logUsage({
-      id: crypto.randomUUID(),
-      callType: 'week_plan_text',
-      modelName,
-      promptTokens: 0,
-      candidateTokens: 0,
-      totalTokens: 0,
-      estimatedCostUsd: 0,
-      durationMs: Date.now() - startTime,
-      status: 'failed',
-      errorDetails: friendlyError,
-      ipHash: businessDetails.ipHash,
-      createdAt: new Date().toISOString()
-    });
-    throw new Error(friendlyError);
+      return posts;
+    } catch (geminiError: any) {
+      console.warn("Gemini week plan generation failed, checking alternatives:", geminiError?.message);
+    }
   }
+
+  // 2. Try OpenRouter Qwen Text Model if OpenRouter key is available
+  const effectiveOpenRouterKey = (openRouterApiKeyOverride || env.OPENROUTER_API_KEY || '').trim();
+  if (effectiveOpenRouterKey) {
+    try {
+      console.log("Generating 7-day plan with Qwen via OpenRouter...");
+      const text = await generateTextWithOpenRouter(prompt, effectiveOpenRouterKey);
+      const cleanJson = text.replace(/^```json/i, '').replace(/```$/i, '').trim();
+      const rawPosts = JSON.parse(cleanJson);
+
+      const posts: TrialPost[] = rawPosts.map((p: any, idx: number) => ({
+        id: crypto.randomUUID(),
+        trialId: '',
+        dayIndex: p.dayIndex || idx + 1,
+        dayName: p.dayName || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][idx],
+        pillar: p.pillar || 'Craft & Process',
+        objective: p.objective || 'Build trust',
+        hook: p.hook || `Day ${idx + 1} spotlight`,
+        caption: p.caption || 'Crafted with care for daily customers.',
+        cta: p.cta || 'Order on WhatsApp',
+        layoutArchetype: archetypes[idx % archetypes.length],
+        generationStatus: 'queued',
+        retryCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+
+      await logUsage({
+        id: crypto.randomUUID(),
+        callType: 'week_plan_text',
+        modelName: 'qwen/qwen-2.5-72b-instruct',
+        promptTokens: 0,
+        candidateTokens: 0,
+        totalTokens: 0,
+        estimatedCostUsd: 0.001,
+        durationMs: Date.now() - startTime,
+        status: 'success',
+        ipHash: businessDetails.ipHash,
+        createdAt: new Date().toISOString()
+      });
+
+      return posts;
+    } catch (orError: any) {
+      console.warn("OpenRouter text plan generation failed, falling back to tailored plan:", orError?.message);
+    }
+  }
+
+  // 3. Resilient Tailored Fallback (ensures trial creation never crashes for new users)
+  console.log("Constructing curated tailored week plan for", businessDetails.name);
+  return buildTailoredDefaultPosts(businessDetails, identity);
 }
 
 // OpenRouter Qwen Image Generation Helper

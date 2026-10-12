@@ -117,8 +117,10 @@ export default function TryPage() {
       }
       if (openRouterApiKey.trim()) {
         localStorage.setItem('contentsmith_openrouter_api_key', openRouterApiKey.trim());
+        formData.append('openRouterApiKey', openRouterApiKey.trim());
       }
       localStorage.setItem('contentsmith_image_provider', imageProvider);
+      formData.append('imageProvider', imageProvider);
 
       const res = await fetch('/api/trials/create', {
         method: 'POST',
