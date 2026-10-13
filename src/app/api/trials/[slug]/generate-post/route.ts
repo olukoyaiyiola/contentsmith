@@ -96,14 +96,16 @@ export async function POST(
       aspectRatio: '4:5',
       post,
       identity,
-      businessName: trial.businessName
+      businessName: trial.businessName,
+      logoUrl: trial.logoUrl
     });
 
     const storyBuffer = await compositeTypography(bgBuffer, {
       aspectRatio: '9:16',
       post,
       identity,
-      businessName: trial.businessName
+      businessName: trial.businessName,
+      logoUrl: trial.logoUrl
     });
 
     // 6. Save Asset Records

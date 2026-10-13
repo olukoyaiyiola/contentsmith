@@ -7,6 +7,7 @@ interface OverlayOptions {
   post: TrialPost;
   identity: IdentityCard;
   businessName: string;
+  logoUrl?: string;
 }
 
 /**
@@ -18,7 +19,7 @@ export async function compositeTypography(
   backgroundBuffer: Buffer,
   options: OverlayOptions
 ): Promise<Buffer> {
-  const { aspectRatio, post, identity, businessName } = options;
+  const { aspectRatio, post, identity, businessName, logoUrl } = options;
   const isStory = aspectRatio === '9:16';
   const width = 1080;
   const height = isStory ? 1920 : 1350;
@@ -89,8 +90,9 @@ export async function compositeTypography(
         style: {
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: 'rgba(18,19,22,0.8)',
-          padding: '14px 28px',
+          gap: '12px',
+          backgroundColor: 'rgba(18,19,22,0.85)',
+          padding: logoUrl ? '10px 24px 10px 16px' : '14px 28px',
           borderRadius: '40px',
           border: '1.5px solid rgba(255,255,255,0.25)',
           fontSize: isStory ? '24px' : '22px',
@@ -98,7 +100,21 @@ export async function compositeTypography(
           letterSpacing: '1px',
           color: accentColor,
         }
-      }, brandName),
+      }, [
+        logoUrl ? React.createElement('img', {
+          key: 'brand-logo',
+          src: logoUrl,
+          style: {
+            width: isStory ? '36px' : '32px',
+            height: isStory ? '36px' : '32px',
+            objectFit: 'contain',
+            borderRadius: '50%',
+            backgroundColor: '#FFFFFF',
+            padding: '2px',
+          }
+        }) : null,
+        React.createElement('span', { key: 'brand-name' }, brandName)
+      ]),
       React.createElement('div', {
         key: 'pillar-badge',
         style: {
