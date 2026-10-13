@@ -542,6 +542,55 @@ async function generateQwenImageWithOpenRouter(
   throw new Error("Invalid image format returned from OpenRouter Qwen Image model.");
 }
 
+// Curated authentic commercial photography libraries by industry
+const CURATED_INDUSTRY_PHOTOS: Record<string, string[]> = {
+  food: [
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=1080&auto=format&fit=crop&q=85', // golden baked pastries
+    'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1080&auto=format&fit=crop&q=85', // bakery loaves
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=1080&auto=format&fit=crop&q=85', // cake & celebrations
+    'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=1080&auto=format&fit=crop&q=85', // treats & snacks
+  ],
+  video_tech: [
+    'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=1080&auto=format&fit=crop&q=85', // cinema rig / camera
+    'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=1080&auto=format&fit=crop&q=85', // video editing suite
+    'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1080&auto=format&fit=crop&q=85', // camera lens
+    'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?w=1080&auto=format&fit=crop&q=85', // studio lighting
+  ],
+  fashion: [
+    'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1080&auto=format&fit=crop&q=85', // fashion model
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1080&auto=format&fit=crop&q=85', // apparel boutique
+    'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1080&auto=format&fit=crop&q=85', // stylish shopping
+    'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1080&auto=format&fit=crop&q=85', // artisan shoes
+  ],
+  beauty: [
+    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1080&auto=format&fit=crop&q=85', // beauty
+    'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1080&auto=format&fit=crop&q=85', // cosmetics
+    'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1080&auto=format&fit=crop&q=85', // salon
+  ],
+  general: [
+    'https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=1080&auto=format&fit=crop&q=85', // artisan workshop
+    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1080&auto=format&fit=crop&q=85', // storefront
+    'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=1080&auto=format&fit=crop&q=85', // retail & trade
+  ]
+};
+
+function selectIndustryPhoto(offering: string, businessName: string, dayIndex: number): string {
+  const text = `${offering} ${businessName}`.toLowerCase();
+  
+  let pool = CURATED_INDUSTRY_PHOTOS.general;
+  if (/pastry|bread|cake|bake|pie|doughnut|cookie|food|snack|restaurant|shawarma|kitchen|catering|meal|suya/i.test(text)) {
+    pool = CURATED_INDUSTRY_PHOTOS.food;
+  } else if (/video|media|film|camera|creator|youtube|tiktok|studio|edit|production|photo|motion|sound|podcast/i.test(text)) {
+    pool = CURATED_INDUSTRY_PHOTOS.video_tech;
+  } else if (/fashion|cloth|wear|dress|apparel|ankara|senator|suit|tailor|boutique|fabric|shoe|bag|linen|streetwear/i.test(text)) {
+    pool = CURATED_INDUSTRY_PHOTOS.fashion;
+  } else if (/beauty|hair|braid|salon|barber|skin|glow|oil|cosmetic|makeup|spa|fragrance|perfume/i.test(text)) {
+    pool = CURATED_INDUSTRY_PHOTOS.beauty;
+  }
+  
+  return pool[(dayIndex - 1) % pool.length] || pool[0];
+}
+
 // 3. Step C: Visual Brief & Image Generation
 export async function generatePostBackground(
   post: TrialPost,
@@ -550,7 +599,8 @@ export async function generatePostBackground(
   referenceImageBase64?: string,
   apiKeyOverride?: string,
   openRouterApiKeyOverride?: string,
-  providerOverride?: 'gemini' | 'openrouter'
+  providerOverride?: 'gemini' | 'openrouter',
+  offeringContext?: string
 ): Promise<Buffer> {
   const startTime = Date.now();
   const env = getServerEnv();
@@ -636,10 +686,10 @@ Composition Guidelines:
     }
   }
 
-  // 3. Resilient Editorial Branded Canvas Engine
-  // Produces an authentic, tactile branded ground adhering strictly to the merchant's brand identity card
+  // 3. Resilient Editorial Branded Canvas Engine (Curated Photography Backdrop)
+  // Produces an authentic, tactile photographic ground adhering strictly to the merchant's brand identity card
   console.log(`Generating authentic editorial flyer canvas for ${businessName} (${post.layoutArchetype})...`);
-  const canvasBuffer = await generateEditorialBrandedCanvas(identity, post, businessName);
+  const canvasBuffer = await generateEditorialBrandedCanvas(identity, post, businessName, offeringContext);
 
   await logUsage({
     id: crypto.randomUUID(),
@@ -659,48 +709,56 @@ Composition Guidelines:
 }
 
 /**
- * Generates an authentic Nigerian editorial advertising ground using sharp & SVG.
- * Ensures trial generation never crashes when third-party diffusion API credits are depleted.
+ * Generates an authentic Nigerian editorial advertising ground using sharp & high-res photography.
+ * Ensures trial generation produces commercial-grade visual flyers even when third-party diffusion API credits are depleted.
  */
 async function generateEditorialBrandedCanvas(
   identity: IdentityCard,
   post: TrialPost,
-  businessName: string
+  businessName: string,
+  offeringContext?: string
 ): Promise<Buffer> {
   const width = 1080;
   const height = 1350;
   const primary = identity.palette?.primary || '#1A1A1A';
-  const secondary = identity.palette?.secondary || '#EAE6DF';
   const accent = identity.palette?.accent || '#F5B301';
 
+  const photoUrl = selectIndustryPhoto(offeringContext || '', businessName, post.dayIndex);
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(photoUrl, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const arrayBuf = await res.arrayBuffer();
+      const resizedPhoto = await sharp(Buffer.from(arrayBuf))
+        .resize(width, height, { fit: 'cover', position: 'center' })
+        .toBuffer();
+
+      return resizedPhoto;
+    }
+  } catch (err: any) {
+    console.warn("Curated photo fetch fallback to textured studio ground:", err.message);
+  }
+
+  // High-contrast textured studio gradient fallback if network is completely offline
   const svg = `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${primary}" />
-          <stop offset="45%" stop-color="#141518" />
+          <stop offset="50%" stop-color="#141518" />
           <stop offset="100%" stop-color="#090A0C" />
         </linearGradient>
-        <radialGradient id="accentGlow" cx="75%" cy="25%" r="60%">
-          <stop offset="0%" stop-color="${accent}" stop-opacity="0.30" />
+        <radialGradient id="accentGlow" cx="75%" cy="25%" r="65%">
+          <stop offset="0%" stop-color="${accent}" stop-opacity="0.35" />
           <stop offset="100%" stop-color="${primary}" stop-opacity="0" />
         </radialGradient>
-        <linearGradient id="bottomShadow" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#000000" stop-opacity="0" />
-          <stop offset="60%" stop-color="#000000" stop-opacity="0.65" />
-          <stop offset="100%" stop-color="#000000" stop-opacity="0.95" />
-        </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#bgGrad)" />
       <rect width="100%" height="100%" fill="url(#accentGlow)" />
-      
-      <!-- Architectural / Editorial Framing -->
-      <rect x="40" y="40" width="${width - 80}" height="${height - 80}" fill="none" stroke="${secondary}" stroke-opacity="0.15" stroke-width="2" rx="12" />
-      <rect x="60" y="60" width="160" height="4" fill="${accent}" rx="2" />
-      
-      <!-- Subtle archetype background geometry -->
-      <circle cx="850" cy="350" r="220" fill="none" stroke="${accent}" stroke-opacity="0.08" stroke-width="40" />
-      <rect width="100%" height="100%" fill="url(#bottomShadow)" />
     </svg>
   `;
 

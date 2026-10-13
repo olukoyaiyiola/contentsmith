@@ -54,7 +54,8 @@ export async function POST(
         trial.logoUrl, 
         apiKey,
         openRouterApiKey,
-        imageProvider
+        imageProvider,
+        trial.offering
       );
     } catch (genErr: any) {
       console.error("Image generation failed:", genErr?.message);
@@ -82,7 +83,8 @@ export async function POST(
           trial.logoUrl,
           apiKey,
           openRouterApiKey,
-          imageProvider
+          imageProvider,
+          trial.offering
         );
       } catch (retryErr) {
         // keep prior buffer
