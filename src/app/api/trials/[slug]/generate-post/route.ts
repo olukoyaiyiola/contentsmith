@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTrialBySlug, updateTrialPost, getSettings, saveAsset } from '@/lib/db';
+import { getTrialBySlug, getAsset, updateTrialPost, getSettings, saveAsset } from '@/lib/db';
 import { generatePostBackground, runQualityGate } from '@/lib/gemini';
 import { compositeTypography } from '@/lib/typography-overlay';
 import { TrialAsset } from '@/types/database';
@@ -33,6 +33,9 @@ export async function POST(
       return NextResponse.json({ error: "Post not found in trial." }, { status: 404 });
     }
 
+    const productAssetId = trial.productAssetIds[(post.dayIndex - 1) % Math.max(trial.productAssetIds.length, 1)];
+    const productPhoto = productAssetId ? await getAsset(productAssetId) : null;
+
     // Update status to generating
     await updateTrialPost(trial.id, postId, { generationStatus: 'generating', errorMessage: undefined });
 
@@ -51,7 +54,7 @@ export async function POST(
         post, 
         identity, 
         trial.businessName, 
-        trial.logoUrl, 
+        productPhoto?.dataUrl,
         apiKey,
         openRouterApiKey,
         imageProvider,
@@ -80,7 +83,7 @@ export async function POST(
           post, 
           identity, 
           trial.businessName, 
-          trial.logoUrl,
+          productPhoto?.dataUrl,
           apiKey,
           openRouterApiKey,
           imageProvider,
@@ -97,6 +100,7 @@ export async function POST(
       post,
       identity,
       businessName: trial.businessName,
+      offering: trial.offering,
       logoUrl: trial.logoUrl
     });
 
@@ -105,6 +109,7 @@ export async function POST(
       post,
       identity,
       businessName: trial.businessName,
+      offering: trial.offering,
       logoUrl: trial.logoUrl
     });
 

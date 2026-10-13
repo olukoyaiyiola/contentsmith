@@ -22,8 +22,8 @@ export default function TryPage() {
   // Form State
   const [businessName, setBusinessName] = useState('');
   const [offering, setOffering] = useState('');
-  const [city, setCity] = useState('Lagos (Yaba)');
-  const [audience, setAudience] = useState('Local neighborhood customers and weekend event planners');
+  const [city, setCity] = useState('');
+  const [audience, setAudience] = useState('');
   const [tone, setTone] = useState('Honest & Direct');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -194,7 +194,7 @@ export default function TryPage() {
           <input
             type="text"
             required
-            placeholder="e.g. Adunni Pastries Yaba"
+            placeholder="e.g. Adunni Pastries"
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border-[1.5px] border-[#121316] rounded text-sm text-[#121316] focus:outline-none focus:ring-2 focus:ring-[#F5B301]"
@@ -225,7 +225,7 @@ export default function TryPage() {
             <input
               type="text"
               required
-              placeholder="e.g. Lagos (Yaba)"
+              placeholder="e.g. Lagos, Abuja, or your neighborhood"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border-[1.5px] border-[#121316] rounded text-sm text-[#121316] focus:outline-none focus:ring-2 focus:ring-[#F5B301]"
@@ -234,11 +234,12 @@ export default function TryPage() {
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-[#121316] mb-1.5">
-              Target Audience
+              Target Audience <span className="text-red-600">*</span>
             </label>
             <input
               type="text"
-              placeholder="e.g. Office workers and student shoppers"
+              required
+              placeholder="e.g. Office workers looking for lunch"
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border-[1.5px] border-[#121316] rounded text-sm text-[#121316] focus:outline-none focus:ring-2 focus:ring-[#F5B301]"

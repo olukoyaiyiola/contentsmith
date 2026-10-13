@@ -251,9 +251,9 @@ function buildTailoredDefaultPosts(
       dayName: "Monday",
       pillar: "Weekly Schedule / Drop",
       objective: "Drive early week pre-orders",
-      hook: `Fresh batch timetable for ${businessDetails.city} orders.`,
-      caption: `We are accepting orders for ${businessDetails.offering} starting this morning. Early booking guarantees same-day neighborhood dispatch.`,
-      cta: "Send a WhatsApp message to book your slot",
+      hook: `Now taking enquiries for ${primaryItem}.`,
+      caption: `${businessDetails.name} offers ${businessDetails.offering}. Message us to confirm current options and ordering details.`,
+      cta: "Message us to enquire",
       layoutArchetype: "announcement" as LayoutArchetype
     },
     {
@@ -261,9 +261,9 @@ function buildTailoredDefaultPosts(
       dayName: "Tuesday",
       pillar: "Product Spotlight",
       objective: "Highlight signature craftsmanship",
-      hook: `Made with precision: our signature ${primaryItem}.`,
-      caption: `Every piece is prepared with care and consistent attention to detail. No shortcuts, just honest quality for our ${businessDetails.city} customers.`,
-      cta: "Tap link to view details and order",
+      hook: `A closer look at ${primaryItem}.`,
+      caption: `Explore ${businessDetails.offering} from ${businessDetails.name}. Contact us for current options and details.`,
+      cta: "Ask about this offering",
       layoutArchetype: "product_hero_offset" as LayoutArchetype
     },
     {
@@ -271,19 +271,19 @@ function buildTailoredDefaultPosts(
       dayName: "Wednesday",
       pillar: "Craft & Process",
       objective: "Build authentic trust",
-      hook: "From raw ingredients to finished standard.",
-      caption: `Behind every order is dedicated handwork and authentic local sourcing. We prioritize lasting taste and presentation over rushed batching.`,
-      cta: "Chat with us on WhatsApp for custom requests",
+      hook: `Find the right ${primaryItem} for you.`,
+      caption: `${businessDetails.name} offers ${businessDetails.offering}. Tell us what you are looking for and we will share the relevant options.`,
+      cta: "Chat with us about your needs",
       layoutArchetype: "split_panel" as LayoutArchetype
     },
     {
       dayIndex: 4,
       dayName: "Thursday",
-      pillar: "Customer Voice",
-      objective: "Social proof in Nigerian retail",
-      hook: `"Ordered for the office on Commercial Avenue. Every item was fresh and on time."`,
-      caption: `Real feedback from our regular buyers across ${businessDetails.city}. Reliable service every single day.`,
-      cta: "Join our regular weekly list on WhatsApp",
+      pillar: "Customer Feedback",
+      objective: "Invite genuine customer feedback",
+      hook: `Your feedback matters to ${businessDetails.name}.`,
+      caption: `Tried ${primaryItem}? Tell us what worked for you and what you would like to see next.`,
+      cta: "Share your feedback",
       layoutArchetype: "testimonial_card" as LayoutArchetype
     },
     {
@@ -291,19 +291,19 @@ function buildTailoredDefaultPosts(
       dayName: "Friday",
       pillar: "Weekend Menu & Bulk Orders",
       objective: "Capture weekend gathering and party demand",
-      hook: `Weekend order guide for ${businessDetails.name}.`,
-      caption: `Planning for family or weekend events? Reserve your ${businessDetails.offering} before slots fill up today.`,
-      cta: "Lock in your weekend order on WhatsApp",
+      hook: `Explore ${businessDetails.offering}.`,
+      caption: `Looking for ${primaryItem}? Contact ${businessDetails.name} to discuss the available options for your needs.`,
+      cta: "Enquire about options",
       layoutArchetype: "price_menu_list" as LayoutArchetype
     },
     {
       dayIndex: 6,
       dayName: "Saturday",
-      pillar: "Brand Value / Philosophy",
+      pillar: "Brand Spotlight",
       objective: "Deepen customer connection",
-      hook: `Quality is our signature in ${businessDetails.city}.`,
-      caption: `We do not compromise on standard. Serving ${businessDetails.audience || 'customers'} with consistency and pride.`,
-      cta: "Visit us or message on WhatsApp",
+      hook: `${businessDetails.name}: here to help with ${primaryItem}.`,
+      caption: `We work with ${businessDetails.audience || 'our customers'} looking for ${businessDetails.offering}. Get in touch to find out more.`,
+      cta: "Get in touch",
       layoutArchetype: "typographic_poster" as LayoutArchetype
     },
     {
@@ -311,9 +311,9 @@ function buildTailoredDefaultPosts(
       dayName: "Sunday",
       pillar: "Restock & Week Ahead",
       objective: "Set up next week's reservations",
-      hook: "Sunday wrap-up and restock notification.",
-      caption: `Thank you for supporting ${businessDetails.name} this week. Monday dispatch lists are now open.`,
-      cta: "Send a message to reserve ahead",
+      hook: `Keep ${primaryItem} in mind for next time.`,
+      caption: `${businessDetails.offering} from ${businessDetails.name}. Save this post and message us whenever you are ready to enquire.`,
+      cta: "Message us when you are ready",
       layoutArchetype: "before_after" as LayoutArchetype
     }
   ];
@@ -368,12 +368,12 @@ Tone: "${identity.brandTone}"
 Return a JSON array of exactly 7 post objects.
 Use each of the following 7 layout archetypes exactly once across the week:
 1. "announcement" (Order deadline, delivery notice, restock)
-2. "product_hero_offset" (Highlighting a flagship item with price or detail)
-3. "split_panel" (Contrasting ingredients, process, or variety)
-4. "testimonial_card" (Real customer voice from Lagos/Nigeria)
-5. "price_menu_list" (Menu, weekly drop, or price breakdown)
-6. "typographic_poster" (Bold quote, opening hours, or punchy philosophy)
-7. "before_after" (Raw dough to golden pastry, fabric to garment, transformation)
+2. "product_hero_offset" (Highlighting a supplied offering without inventing a price)
+3. "split_panel" (Contrasting two supplied offerings or details)
+4. "testimonial_card" (Invite genuine customer feedback; never invent a quote)
+5. "price_menu_list" (List submitted offerings; include prices only when provided)
+6. "typographic_poster" (A concise brand message grounded in supplied business details)
+7. "before_after" (Show a real transformation only when the supplied details support it)
 
 Return ONLY valid JSON (no markdown \`\`\`json tags):
 [
@@ -382,9 +382,9 @@ Return ONLY valid JSON (no markdown \`\`\`json tags):
     "dayName": "Monday",
     "pillar": "Weekly Drop / Announcement",
     "objective": "Drive early pre-orders for the week",
-    "hook": "Fresh batch timetable for Yaba deliveries.",
-    "caption": "Short declarative caption. No em dashes. No second-person hype. Clear Nigerian retail context.",
-    "cta": "Send a WhatsApp message to book",
+    "hook": "A clear, specific hook about this business's offering.",
+    "caption": "A concise, relevant caption grounded in the submitted business details.",
+    "cta": "Contact the business to enquire",
     "layoutArchetype": "announcement"
   },
   ...
@@ -392,7 +392,11 @@ Return ONLY valid JSON (no markdown \`\`\`json tags):
 
 Rules:
 - Days must be 1 to 7 (Monday to Sunday).
-- Captions must feel like real Nigerian business communications: clear, grounded, respectful.
+- Keep every hook, caption, and call to action relevant to the submitted business name, offering, audience, and tone.
+- Mention the supplied city only when it is genuinely useful to this post; never add a default neighborhood or location.
+- Never invent customer testimonials, reviews, prices, discounts, stock, delivery terms, opening hours, guarantees, ingredients, or production claims.
+- For the testimonial archetype, invite real feedback instead of presenting a fabricated customer quote.
+- Captions must be clear, grounded, respectful, and useful to the intended audience.
 - Strictly no em dashes. No empty motivational platitudes.
 `;
 
@@ -417,7 +421,7 @@ Rules:
         objective: p.objective || 'Build trust',
         hook: p.hook || `Day ${idx + 1} spotlight`,
         caption: p.caption || 'Crafted with care for daily customers.',
-        cta: p.cta || 'Order on WhatsApp',
+        cta: p.cta || 'Contact us to enquire',
         layoutArchetype: archetypes[idx % archetypes.length],
         generationStatus: 'queued',
         retryCount: 0,
@@ -463,7 +467,7 @@ Rules:
         objective: p.objective || 'Build trust',
         hook: p.hook || `Day ${idx + 1} spotlight`,
         caption: p.caption || 'Crafted with care for daily customers.',
-        cta: p.cta || 'Order on WhatsApp',
+        cta: p.cta || 'Contact us to enquire',
         layoutArchetype: archetypes[idx % archetypes.length],
         generationStatus: 'queued',
         retryCount: 0,
@@ -503,7 +507,7 @@ async function generateQwenImageWithOpenRouter(
   modelName: string
 ): Promise<Buffer> {
   const cleanKey = apiKey.trim().replace(/^["']|["']$/g, '');
-  const res = await fetch("https://openrouter.ai/api/v1/images", {
+  const res = await fetch("https://openrouter.ai/api/v1/images/generations", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${cleanKey}`,
@@ -514,6 +518,7 @@ async function generateQwenImageWithOpenRouter(
     body: JSON.stringify({
       model: modelName || "qwen/qwen-image-3",
       prompt,
+      n: 1,
     }),
   });
 
@@ -533,8 +538,12 @@ async function generateQwenImageWithOpenRouter(
     return Buffer.from(item.b64_json, "base64");
   }
 
-  if (item.url) {
-    const imgRes = await fetch(item.url);
+  const imageUrl = item.url || item.image_url?.url;
+  if (imageUrl) {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) {
+      throw new Error(`OpenRouter image download failed (${imgRes.status}).`);
+    }
     const arrayBuffer = await imgRes.arrayBuffer();
     return Buffer.from(arrayBuffer);
   }
@@ -604,18 +613,56 @@ export async function generatePostBackground(
 ): Promise<Buffer> {
   const startTime = Date.now();
   const env = getServerEnv();
+  const photoLayouts = ['product_hero_offset', 'split_panel', 'before_after'];
+  const needsPhotography = photoLayouts.includes(post.layoutArchetype);
+
+  if (!needsPhotography) {
+    const canvasBuffer = await generateEditorialBrandedCanvas(identity, post, businessName, offeringContext, false);
+    await logUsage({
+      id: crypto.randomUUID(),
+      callType: 'image_generation',
+      modelName: 'brand-graphic-canvas',
+      promptTokens: 0,
+      candidateTokens: 0,
+      totalTokens: 0,
+      estimatedCostUsd: 0,
+      durationMs: Date.now() - startTime,
+      status: 'success',
+      ipHash: 'brand_graphic_canvas',
+      createdAt: new Date().toISOString()
+    });
+    return canvasBuffer;
+  }
+
+  if (referenceImageBase64) {
+    const base64 = referenceImageBase64.replace(/^data:image\/[^;]+;base64,/, '');
+    const productImage = await sharp(Buffer.from(base64, 'base64'))
+      .rotate()
+      .resize(1080, 1350, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 94 })
+      .toBuffer();
+    await logUsage({
+      id: crypto.randomUUID(),
+      callType: 'image_generation',
+      modelName: 'uploaded-product-photo',
+      promptTokens: 0,
+      candidateTokens: 0,
+      totalTokens: 0,
+      estimatedCostUsd: 0,
+      durationMs: Date.now() - startTime,
+      status: 'success',
+      ipHash: 'uploaded_product_photo',
+      createdAt: new Date().toISOString()
+    });
+    return productImage;
+  }
 
   // Strict anti-slop prompt for Image Models
   const imagePrompt = `
-Commercial advertising photography background for Nigerian business "${businessName}".
-Visual Theme: ${post.pillar} - ${post.objective}.
-Layout Archetype: ${post.layoutArchetype}.
-Color Palette: 60% dominant tone (${identity.palette.primary}), 30% supporting ground (${identity.palette.secondary}), 10% accent (${identity.palette.accent}).
-Composition Guidelines:
-- Clean editorial lighting, tactile textures (ceramic, warm paper, wood tabletop, Lagos sunlight, woven reed).
-- Single focal point with generous negative space.
-- NO TEXT. DO NOT RENDER ANY WORDS, LETTERS, SIGNS, LABELS, WATERMARKS, OR CHARACTERS. Text will be overlaid separately.
-- Strict Negative Prompt: purple gradients, neon glow, floating 3D spheres, glossy plastic, fake smiles, over-smoothed mannequin skin, generic luxury marble, stereotyped clip art.
+Create a high-resolution commercial product photograph for ${businessName}, featuring ${offeringContext || post.hook}.
+This image supports the ${post.layoutArchetype} flyer, titled "${post.hook}". Show the actual kind of product or service described by the business, with a clear focal subject and room around it for a separate text layout.
+Use natural, editorial lighting and tactile, believable materials. Let the brand palette influence small styling details: ${identity.palette.primary}, ${identity.palette.secondary}, and ${identity.palette.accent}.
+Do not invent a logo, package label, customer, result, or business claim. No text, letters, signage, watermark, or pseudo-typography. Avoid generic stock-photo staging, purple gradients, neon glow, floating 3D objects, glossy plastic, and unrelated props.
 `;
 
   // Check if OpenRouter Qwen should be used
@@ -689,8 +736,7 @@ Composition Guidelines:
   // 3. Resilient Editorial Branded Canvas Engine (Curated Photography Backdrop)
   // Produces an authentic, tactile photographic ground adhering strictly to the merchant's brand identity card
   console.log(`Generating authentic editorial flyer canvas for ${businessName} (${post.layoutArchetype})...`);
-  const canvasBuffer = await generateEditorialBrandedCanvas(identity, post, businessName, offeringContext);
-
+  const canvasBuffer = await generateEditorialBrandedCanvas(identity, post, businessName, offeringContext, true);
   await logUsage({
     id: crypto.randomUUID(),
     callType: 'image_generation',
@@ -716,12 +762,26 @@ async function generateEditorialBrandedCanvas(
   identity: IdentityCard,
   post: TrialPost,
   businessName: string,
-  offeringContext?: string
+  offeringContext?: string,
+  usePhotography = true
 ): Promise<Buffer> {
   const width = 1080;
   const height = 1350;
   const primary = identity.palette?.primary || '#1A1A1A';
+  const secondary = identity.palette?.secondary || '#EAE6DF';
   const accent = identity.palette?.accent || '#F5B301';
+
+  if (!usePhotography) {
+    const svg = `
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="${secondary}" />
+        <path d="M0 1070 L1080 790 M0 1240 L1080 960" stroke="${primary}" stroke-opacity="0.08" stroke-width="3" />
+        <circle cx="920" cy="190" r="132" fill="${accent}" fill-opacity="0.16" />
+        <circle cx="920" cy="190" r="96" fill="none" stroke="${primary}" stroke-opacity="0.12" stroke-width="2" />
+      </svg>
+    `;
+    return sharp(Buffer.from(svg)).jpeg({ quality: 94 }).toBuffer();
+  }
 
   const photoUrl = selectIndustryPhoto(offeringContext || '', businessName, post.dayIndex);
 

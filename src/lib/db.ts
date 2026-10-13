@@ -50,7 +50,7 @@ let inMemoryStore: LocalDbStore | null = null;
 const INITIAL_EXAMPLES: ExampleItem[] = [
   {
     id: "ex-1",
-    title: "Yaba Sourdough Batch Announcement",
+    title: "Sourdough Batch Announcement",
     industry: "Food & Bakery",
     platform: "Instagram 4:5",
     imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80",

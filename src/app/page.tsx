@@ -133,7 +133,7 @@ export default function HomePage() {
               Case in point
             </span>
             <h3 className="font-display font-black text-2xl sm:text-3xl mb-3">
-              Adunni Pastries, Commercial Avenue, Yaba
+              Seven designed posts for a pastry business
             </h3>
             <p className="text-sm sm:text-base text-[#5C5F66] leading-relaxed mb-4">
               A pastry shop with no dedicated graphic artist. She uploads her shop sign and two photos of warm meat pies. Within two minutes, she has seven distinct posts: Wednesday batch prep, Friday bulk party slots, and Sunday restock alerts with clean typographic flyers.

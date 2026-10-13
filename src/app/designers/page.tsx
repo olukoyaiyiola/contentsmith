@@ -154,7 +154,7 @@ function DesignersForm() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Adunni Pastries Yaba"
+                  placeholder="e.g. Adunni Pastries"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   className="w-full p-2.5 border-[1.5px] border-[#121316] rounded"

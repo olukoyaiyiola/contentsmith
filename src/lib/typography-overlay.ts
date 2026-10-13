@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import React from 'react';
+import sharp from 'sharp';
 import { TrialPost, IdentityCard } from '@/types/database';
 
 interface OverlayOptions {
@@ -7,6 +8,7 @@ interface OverlayOptions {
   post: TrialPost;
   identity: IdentityCard;
   businessName: string;
+  offering: string;
   logoUrl?: string;
 }
 
@@ -19,199 +21,155 @@ export async function compositeTypography(
   backgroundBuffer: Buffer,
   options: OverlayOptions
 ): Promise<Buffer> {
-  const { aspectRatio, post, identity, businessName, logoUrl } = options;
+  const { aspectRatio, post, identity, businessName, offering, logoUrl } = options;
   const isStory = aspectRatio === '9:16';
   const width = 1080;
   const height = isStory ? 1920 : 1350;
-
   const accentColor = identity.palette?.accent || '#F5B301';
   const primaryColor = identity.palette?.primary || '#121316';
+  const secondaryColor = identity.palette?.secondary || '#EAE6DF';
   const brandName = (businessName || 'CONTENTSMITH').toUpperCase();
   const pillarText = (post.pillar || 'FEATURED').toUpperCase();
-  const headline = post.hook || '';
-  const caption = (post.caption || '').slice(0, 160) + ((post.caption || '').length > 160 ? '...' : '');
-  const ctaText = post.cta || 'Order on WhatsApp';
-
-  const photoBase64 = `data:image/jpeg;base64,${backgroundBuffer.toString('base64')}`;
-
-  const element = React.createElement('div', {
+  const headline = post.hook || offering;
+  const caption = (post.caption || '').length > 170
+    ? `${post.caption.slice(0, 167).trimEnd()}...`
+    : post.caption || '';
+  const ctaText = post.cta || 'Contact us to enquire';
+  const photoBase64 = `data:image/jpeg;base64,${(await sharp(backgroundBuffer).jpeg({ quality: 94 }).toBuffer()).toString('base64')}`;
+  const padding = isStory ? '82px 72px' : '68px';
+  const headlineSize = headline.length > 54 ? (isStory ? 60 : 52) : headline.length > 32 ? (isStory ? 72 : 62) : (isStory ? 88 : 76);
+  const photoLayout = ['product_hero_offset', 'split_panel', 'before_after'].includes(post.layoutArchetype);
+  const image = (key: string, style: React.CSSProperties) => React.createElement('img', { key, src: photoBase64, style });
+  const text = (key: string, value: string, style: React.CSSProperties) => React.createElement('div', { key, style }, value);
+  const brandHeader = (color = primaryColor) => React.createElement('div', {
+    key: 'brand-header',
+    style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', color, width: '100%' }
+  }, [
+    React.createElement('div', {
+      key: 'brand',
+      style: { display: 'flex', alignItems: 'center', gap: '16px', fontSize: isStory ? '27px' : '24px', fontWeight: 800 }
+    }, [
+      logoUrl ? React.createElement('img', {
+        key: 'logo', src: logoUrl,
+        style: { width: '58px', height: '58px', objectFit: 'contain', backgroundColor: '#FFFFFF', padding: '4px', borderRadius: '8px' }
+      }) : null,
+      React.createElement('span', { key: 'name' }, brandName)
+    ]),
+    text('pillar', pillarText, {
+      fontSize: isStory ? '20px' : '18px', fontWeight: 800, color: primaryColor,
+      backgroundColor: accentColor, padding: '12px 18px', borderRadius: '4px'
+    })
+  ]);
+  const ctaPanel = (dark = false) => React.createElement('div', {
+    key: 'cta-panel',
     style: {
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      height: '100%',
-      position: 'relative',
-      backgroundColor: primaryColor,
-      color: '#FFFFFF',
-      fontFamily: 'sans-serif',
-      padding: isStory ? '96px 72px' : '72px',
-      justifyContent: 'space-between',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px',
+      backgroundColor: accentColor, color: primaryColor, padding: isStory ? '26px 30px' : '22px 28px',
+      borderRadius: '4px', borderLeft: `10px solid ${dark ? secondaryColor : primaryColor}`
     }
   }, [
-    // Background photo
-    React.createElement('img', {
-      key: 'bg-img',
-      src: photoBase64,
-      style: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: `${width}px`,
-        height: `${height}px`,
-        objectFit: 'cover',
-      }
-    }),
-    // High-contrast dual gradient scrim
-    React.createElement('div', {
-      key: 'bg-overlay',
-      style: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: `${width}px`,
-        height: `${height}px`,
-        background: isStory
-          ? 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 35%, rgba(0,0,0,0.88) 72%, rgba(0,0,0,0.98) 100%)'
-          : 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 35%, rgba(0,0,0,0.88) 75%, rgba(0,0,0,0.98) 100%)',
-      }
-    }),
-    // Header row
-    React.createElement('div', {
-      key: 'header',
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
-      }
-    }, [
-      React.createElement('div', {
-        key: 'brand-pill',
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          backgroundColor: 'rgba(18,19,22,0.85)',
-          padding: logoUrl ? '10px 24px 10px 16px' : '14px 28px',
-          borderRadius: '40px',
-          border: '1.5px solid rgba(255,255,255,0.25)',
-          fontSize: isStory ? '24px' : '22px',
-          fontWeight: 700,
-          letterSpacing: '1px',
-          color: accentColor,
-        }
-      }, [
-        logoUrl ? React.createElement('img', {
-          key: 'brand-logo',
-          src: logoUrl,
-          style: {
-            width: isStory ? '36px' : '32px',
-            height: isStory ? '36px' : '32px',
-            objectFit: 'contain',
-            borderRadius: '50%',
-            backgroundColor: '#FFFFFF',
-            padding: '2px',
-          }
-        }) : null,
-        React.createElement('span', { key: 'brand-name' }, brandName)
-      ]),
-      React.createElement('div', {
-        key: 'pillar-badge',
-        style: {
-          display: 'flex',
-          backgroundColor: accentColor,
-          color: primaryColor,
-          padding: '14px 28px',
-          borderRadius: '12px',
-          fontSize: isStory ? '22px' : '20px',
-          fontWeight: 800,
-          letterSpacing: '1.5px',
-        }
-      }, pillarText),
-    ]),
-    // Bottom Content block
-    React.createElement('div', {
-      key: 'bottom-content',
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: isStory ? '28px' : '20px',
-        marginBottom: isStory ? '40px' : '0px',
-      }
-    }, [
-      // Accent color dash
-      React.createElement('div', {
-        key: 'accent-bar',
-        style: {
-          width: '90px',
-          height: '6px',
-          backgroundColor: accentColor,
-          borderRadius: '3px',
-        }
-      }),
-      // Bold headline
-      React.createElement('div', {
-        key: 'headline',
-        style: {
-          fontSize: isStory ? '66px' : '58px',
-          fontWeight: 800,
-          lineHeight: 1.15,
-          color: '#FFFFFF',
-          textShadow: '0 4px 16px rgba(0,0,0,0.8)',
-        }
-      }, headline),
-      // Explanatory caption / hook context
-      caption ? React.createElement('div', {
-        key: 'caption',
-        style: {
-          fontSize: isStory ? '28px' : '25px',
-          lineHeight: 1.45,
-          color: '#E0E0E0',
-          maxWidth: '850px',
-        }
-      }, caption) : null,
-      // Prominent Call-To-Action badge
-      React.createElement('div', {
-        key: 'cta-box',
-        style: {
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: accentColor,
-          color: primaryColor,
-          padding: '24px 36px',
-          borderRadius: '20px',
-          marginTop: '12px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-        }
-      }, [
-        React.createElement('div', {
-          key: 'cta-text-wrapper',
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-          }
-        }, [
-          React.createElement('span', {
-            key: 'cta-action',
-            style: { fontSize: '26px', fontWeight: 800 }
-          }, ctaText),
-          React.createElement('span', {
-            key: 'cta-brand',
-            style: { fontSize: '20px', fontWeight: 600, opacity: 0.85 }
-          }, brandName)
-        ]),
-        React.createElement('div', {
-          key: 'cta-arrow',
-          style: {
-            fontSize: '36px',
-            fontWeight: 800,
-          }
-        }, '→')
-      ])
-    ])
+    text('cta', ctaText, { fontSize: isStory ? '28px' : '24px', fontWeight: 800, flex: 1 }),
+    text('brand-cta', brandName, { fontSize: isStory ? '18px' : '16px', fontWeight: 700 })
   ]);
+  const baseStyle: React.CSSProperties = {
+    display: 'flex', flexDirection: 'column', width: '100%', height: '100%',
+    padding, justifyContent: 'space-between', gap: isStory ? '42px' : '30px',
+    fontFamily: 'sans-serif', color: primaryColor, backgroundColor: secondaryColor
+  };
+  let children: React.ReactNode[];
 
+  if (post.layoutArchetype === 'product_hero_offset') {
+    children = [
+      image('photo', { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }),
+      React.createElement('div', { key: 'shade', style: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 38%, rgba(0,0,0,0.8) 100%)' } }),
+      brandHeader('#FFFFFF'),
+      React.createElement('div', { key: 'copy', style: { display: 'flex', flexDirection: 'column', gap: '22px', marginTop: 'auto', color: '#FFFFFF' } }, [
+        text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.05, maxWidth: '900px' }),
+        caption ? text('caption', caption, { fontSize: isStory ? '27px' : '24px', lineHeight: 1.35, maxWidth: '850px' }) : null,
+        ctaPanel(true)
+      ])
+    ];
+    baseStyle.position = 'relative';
+    baseStyle.backgroundColor = primaryColor;
+  } else if (post.layoutArchetype === 'split_panel') {
+    children = [
+      brandHeader(),
+      image('photo', { width: '100%', height: `${Math.round(height * 0.49)}px`, objectFit: 'cover', borderRadius: '4px' }),
+      React.createElement('div', { key: 'copy', style: { display: 'flex', flexDirection: 'column', gap: '20px' } }, [
+        text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.08 }),
+        caption ? text('caption', caption, { fontSize: isStory ? '26px' : '23px', lineHeight: 1.4 }) : null,
+        ctaPanel()
+      ])
+    ];
+  } else if (post.layoutArchetype === 'before_after') {
+    children = [
+      brandHeader(),
+      image('photo', { width: '100%', height: `${Math.round(height * 0.47)}px`, objectFit: 'cover', border: `8px solid ${primaryColor}` }),
+      text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.08 }),
+      React.createElement('div', { key: 'bottom', style: { display: 'flex', flexDirection: 'column', gap: '20px' } }, [
+        caption ? text('caption', caption, { fontSize: isStory ? '25px' : '22px', lineHeight: 1.4 }) : null,
+        ctaPanel()
+      ])
+    ];
+  } else if (post.layoutArchetype === 'price_menu_list') {
+    const offeringItems = offering.split(/,|;|\band\b/i).map(item => item.trim()).filter(Boolean).slice(0, 5);
+    children = [
+      brandHeader(),
+      React.createElement('div', { key: 'menu-heading', style: { display: 'flex', flexDirection: 'column', gap: '14px' } }, [
+        text('eyebrow', 'WHAT WE OFFER', { fontSize: '19px', fontWeight: 800, color: primaryColor, backgroundColor: accentColor, padding: '10px 16px', alignSelf: 'flex-start' }),
+        text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.06 })
+      ]),
+      React.createElement('div', { key: 'offerings', style: { display: 'flex', flexDirection: 'column', gap: '14px' } }, offeringItems.map((item, index) =>
+        React.createElement('div', { key: `offering-${index}`, style: { display: 'flex', alignItems: 'center', gap: '18px', borderBottom: `2px solid ${primaryColor}30`, padding: '12px 0', fontSize: isStory ? '27px' : '23px', fontWeight: 700 } }, [
+          text('index', String(index + 1).padStart(2, '0'), { color: accentColor, fontSize: isStory ? '25px' : '22px', fontWeight: 900 }),
+          text('item', item, { flex: 1 })
+        ])
+      )),
+      caption ? text('caption', caption, { fontSize: isStory ? '24px' : '21px', lineHeight: 1.35 }) : null,
+      ctaPanel()
+    ];
+  } else if (post.layoutArchetype === 'testimonial_card') {
+    baseStyle.backgroundColor = primaryColor;
+    baseStyle.color = secondaryColor;
+    children = [
+      brandHeader(secondaryColor),
+      text('eyebrow', 'A NOTE TO OUR CUSTOMERS', { fontSize: '19px', fontWeight: 800, color: primaryColor, backgroundColor: accentColor, padding: '12px 16px', alignSelf: 'flex-start' }),
+      React.createElement('div', { key: 'feedback', style: { display: 'flex', flexDirection: 'column', gap: '24px', borderLeft: `8px solid ${accentColor}`, paddingLeft: '32px' } }, [
+        text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.08, color: '#FFFFFF' }),
+        caption ? text('caption', caption, { fontSize: isStory ? '27px' : '24px', lineHeight: 1.4, color: secondaryColor }) : null
+      ]),
+      ctaPanel(true)
+    ];
+  } else if (post.layoutArchetype === 'typographic_poster') {
+    baseStyle.backgroundColor = primaryColor;
+    baseStyle.color = '#FFFFFF';
+    children = [
+      brandHeader('#FFFFFF'),
+      text('eyebrow', pillarText, { fontSize: isStory ? '23px' : '20px', fontWeight: 800, color: accentColor }),
+      text('headline', headline, { fontSize: headlineSize + 8, fontWeight: 900, lineHeight: 1.02, color: '#FFFFFF', maxWidth: '900px' }),
+      caption ? text('caption', caption, { fontSize: isStory ? '27px' : '24px', lineHeight: 1.4, color: secondaryColor }) : null,
+      ctaPanel(true)
+    ];
+  } else if (post.layoutArchetype === 'announcement') {
+    children = [
+      brandHeader(),
+      text('eyebrow', 'BUSINESS UPDATE', { fontSize: '19px', fontWeight: 800, color: primaryColor, backgroundColor: accentColor, padding: '10px 16px', alignSelf: 'flex-start' }),
+      text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.06, maxWidth: '900px' }),
+      caption ? text('caption', caption, { fontSize: isStory ? '27px' : '24px', lineHeight: 1.4 }) : null,
+      ctaPanel()
+    ];
+  } else {
+    children = [
+      brandHeader(),
+      text('eyebrow', 'FOR YOU', { fontSize: '19px', fontWeight: 800, color: primaryColor, backgroundColor: accentColor, padding: '10px 16px', alignSelf: 'flex-start' }),
+      text('headline', headline, { fontSize: headlineSize, fontWeight: 900, lineHeight: 1.06 }),
+      caption ? text('caption', caption, { fontSize: isStory ? '27px' : '24px', lineHeight: 1.4 }) : null,
+      ctaPanel()
+    ];
+  }
+
+  if (photoLayout) baseStyle.position = 'relative';
+  const element = React.createElement('div', { style: baseStyle }, children);
   const res = new ImageResponse(element, { width, height });
   const arrayBuf = await res.arrayBuffer();
   return Buffer.from(arrayBuf);
